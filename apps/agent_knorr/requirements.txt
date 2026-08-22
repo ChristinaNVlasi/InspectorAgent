@@ -1,0 +1,66 @@
+# Knorr PCB Inspection Agent Requirements
+
+# ==========================================
+# Core ADK and AI dependencies
+# ==========================================
+google-genai>=0.2.0
+google-adk>=0.1.0
+
+# ==========================================
+# MCP (Model Context Protocol)
+# ==========================================
+mcp>=0.9.0
+fastmcp>=0.1.0
+
+# ==========================================
+# Web frameworks
+# ==========================================
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+starlette>=0.27.0
+streamlit>=1.28.0
+
+# ==========================================
+# Environment and configuration
+# ==========================================
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+
+# ==========================================
+# PCB Inspection - Computer Vision
+# ==========================================
+transformers>=4.47.0,<5.0.0  # Compatible with docling-ibm-models
+torch>=2.6.0
+torchvision>=0.21.0
+Pillow>=10.4.0
+opencv-python>=4.8.0
+
+# ==========================================
+# PCB Inspection - Vector Database & RAG
+# ==========================================
+chromadb~=1.1.0  # Compatible with crewai 1.6.1
+numpy>=1.26.4,<2.0.0
+
+# ==========================================
+# PCB Inspection - Preprocessing
+# ==========================================
+rembg>=2.0.50  # AI-powered background removal
+scikit-image>=0.21.0
+
+# ==========================================
+# Utilities
+# ==========================================
+requests>=2.31.0
+tqdm>=4.65.0
+
+# ==========================================
+# Logging and monitoring
+# ==========================================
+python-json-logger>=2.0.7
+
+# ==========================================
+# Development and Testing (optional)
+# ==========================================
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0
+httpx>=0.24.0

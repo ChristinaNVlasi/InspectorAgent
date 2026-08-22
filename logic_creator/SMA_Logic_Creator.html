@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMA Logic Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0c0d0f; --bg2:#141518; --bg3:#1c1e23; --bg4:#242730;
+  --border:#2a2d35; --border2:#343840;
+  --text:#e8e9eb; --text2:#8f929e; --text3:#555a66;
+  --accent:#4f7fff; --accent2:#3d6be8; --glow:rgba(79,127,255,.12);
+  --green:#3ecf8e; --amber:#f59e0b; --coral:#f87171; --purple:#a78bfa; --teal:#2dd4bf;
+  --green-bg:rgba(62,207,142,.08); --amber-bg:rgba(245,158,11,.08); --coral-bg:rgba(248,113,113,.08);
+  --r:10px; --r2:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;overflow:hidden}
+.app{display:grid;grid-template-columns:440px 1fr;grid-template-rows:52px 1fr;height:100vh;overflow:hidden}
+
+/* TOPBAR */
+.topbar{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--bg2);z-index:100}
+.logo{font-family:'Instrument Serif',serif;font-size:17px;letter-spacing:.01em}
+.logo em{color:var(--accent);font-style:italic}
+.sep{width:1px;height:20px;background:var(--border)}
+.step-pills{display:flex;gap:6px;margin-left:4px;flex-wrap:nowrap}
+.step-pill{font-size:10px;font-weight:500;padding:3px 9px;border-radius:20px;border:1px solid var(--border2);color:var(--text3);cursor:default;transition:all .2s;white-space:nowrap}
+.step-pill.done{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.step-pill.active{border-color:var(--accent);color:var(--accent);background:var(--glow)}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.btn{padding:6px 14px;border-radius:var(--r2);border:none;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:hover{background:var(--bg3);color:var(--text)}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* LEFT WIZARD PANEL */
+.wizard{background:var(--bg2);border-right:1px solid var(--border);overflow-y:scroll;overflow-x:hidden;display:flex;flex-direction:column;padding:0;height:calc(100vh - 52px);max-height:calc(100vh - 52px)}
+.wizard::-webkit-scrollbar{width:6px}
+.wizard::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.wizard::-webkit-scrollbar-track{background:var(--bg3)}
+
+/* RIGHT CANVAS + JSON */
+.right{display:grid;grid-template-rows:1fr 280px;overflow:hidden;min-height:0}
+.canvas-wrap{position:relative;overflow:hidden;background:var(--bg);min-height:0}
+.json-panel{background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-direction:column;padding:12px 16px;gap:8px}
+.json-header{display:flex;align-items:center;justify-content:space-between}
+.json-title{font-size:10px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)}
+.json-scroll{flex:1;overflow-y:auto;background:var(--bg);border-radius:var(--r2);border:1px solid var(--border);padding:10px 12px;font-family:'DM Mono',monospace;font-size:10.5px;line-height:1.65;white-space:pre}
+.json-scroll::-webkit-scrollbar{width:3px}
+.json-scroll::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.jk{color:#7dd3fc}.jv{color:#86efac}.jn{color:#fca5a5}.jb{color:var(--amber)}.js{color:var(--teal)}
+/* YAML syntax */
+.yk{color:#7dd3fc}.yv{color:#86efac}.yc{color:#555a66;font-style:italic}.ya{color:#f59e0b}.ys{color:#a78bfa}
+/* OUTPUT TABS */
+.out-tabs{display:flex;gap:4px;align-items:center}
+.out-tab{background:transparent;border:1px solid var(--border2);color:var(--text3);font-family:'DM Mono',monospace;font-size:10px;font-weight:500;padding:3px 10px;border-radius:4px;cursor:pointer;transition:all .15s;letter-spacing:.04em;text-transform:uppercase}
+.out-tab.active{background:var(--glow);border-color:var(--accent);color:var(--accent)}
+
+/* GRID */
+#grid-bg{position:absolute;inset:0;pointer-events:none}
+#svg-layer{position:absolute;inset:0;pointer-events:none;overflow:visible}
+#nodes-layer{position:absolute;top:0;left:0}
+
+/* WIZARD SECTIONS */
+.wiz-section{border-bottom:1px solid var(--border);overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1);flex-shrink:0}
+.wiz-section.collapsed{max-height:54px}
+.wiz-section.expanded{max-height:9999px}
+.wiz-section-head{display:flex;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;user-select:none;position:relative}
+.wiz-section-head:hover{background:var(--bg3)}
+.wiz-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;font-family:'DM Mono',monospace;flex-shrink:0;border:1px solid var(--border2);color:var(--text3);transition:all .2s}
+.wiz-num.done{background:var(--green);border-color:var(--green);color:#000}
+.wiz-num.active{background:var(--glow);border-color:var(--accent);color:var(--accent)}
+.wiz-section-title{font-size:13px;font-weight:500;color:var(--text);flex:1}
+.wiz-section-sub{font-size:11px;color:var(--text3)}
+.wiz-chevron{color:var(--text3);transition:transform .25s;font-size:12px}
+.wiz-section.expanded .wiz-chevron{transform:rotate(180deg)}
+.wiz-body{padding:0 18px 16px}
+
+/* INDUSTRY CARDS */
+.industry-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+.industry-card{padding:12px;border-radius:var(--r);border:1.5px solid var(--border);background:var(--bg3);cursor:pointer;transition:all .15s}
+.industry-card:hover{border-color:var(--border2);background:var(--bg4)}
+.industry-card.selected{border-color:var(--accent);background:var(--glow)}
+.ic-icon{font-size:20px;margin-bottom:6px}
+.ic-label{font-size:12px;font-weight:500;color:var(--text)}
+.ic-sub{font-size:10px;color:var(--text3);margin-top:2px;line-height:1.4}
+
+/* TOGGLE ROW */
+.toggle-section{margin-bottom:10px}
+.toggle-label{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px}
+.toggle-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);margin-bottom:6px;transition:border-color .15s}
+.toggle-row.enabled{border-color:var(--accent)}
+.toggle-row-info{flex:1}
+.toggle-row-name{font-size:12px;font-weight:500;color:var(--text)}
+.toggle-row-desc{font-size:10px;color:var(--text3);margin-top:2px}
+.toggle{position:relative;width:34px;height:18px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--border2);border-radius:9px;cursor:pointer;transition:background .2s}
+.toggle input:checked+.toggle-track{background:var(--accent)}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none}
+.toggle input:checked~.toggle-thumb{transform:translateX(16px)}
+
+/* SUB-OPTIONS */
+.sub-options{background:var(--bg);border-radius:var(--r);border:1px solid var(--border);padding:10px 12px;margin-top:4px;margin-bottom:8px}
+.sub-opt-title{font-size:10px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
+.check-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;cursor:pointer}
+.check-row input[type=checkbox]{accent-color:var(--accent);width:13px;height:13px;margin-top:1px;flex-shrink:0;cursor:pointer}
+.check-text{font-size:11px;color:var(--text2);line-height:1.4}
+.check-sub{font-size:10px;color:var(--text3)}
+
+/* TARGET INPUTS */
+.target-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.target-card{padding:10px 12px;border-radius:var(--r2);border:1px solid var(--border);background:var(--bg3)}
+.target-label{font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.target-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:5px;color:var(--text);padding:5px 8px;font-family:'DM Sans',sans-serif;font-size:11px}
+.target-input:focus{outline:none;border-color:var(--accent)}
+.target-unit{font-size:10px;color:var(--text3);margin-top:3px}
+
+/* NODES on canvas */
+.cnode{position:absolute;min-width:170px;max-width:200px;border-radius:var(--r);border:1px solid var(--border2);cursor:pointer;user-select:none;transition:box-shadow .15s,border-color .15s}
+.cnode:hover{box-shadow:0 0 0 1px var(--border2),0 4px 18px rgba(0,0,0,.4)}
+.cnode.selected{border-color:var(--accent)!important;box-shadow:0 0 0 2px var(--glow),0 4px 18px rgba(0,0,0,.5)!important}
+.cnode.dragging{cursor:grabbing;box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:1000}
+.cnode-h{display:flex;align-items:center;gap:7px;padding:9px 11px 7px}
+.cnode-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.cnode-title{font-size:11px;font-weight:500;color:var(--text);flex:1;line-height:1.3}
+.cnode-tag{font-size:9px;font-family:'DM Mono',monospace;padding:1px 5px;border-radius:3px}
+.cnode-b{padding:0 11px 9px;font-size:10px;color:var(--text3);line-height:1.45}
+.cnode-ports{display:flex;justify-content:space-between;padding:5px 11px;border-top:1px solid var(--border)}
+.port-g{display:flex;gap:5px;align-items:center}
+.port{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg2);transition:all .15s}
+.port-lbl{font-size:8px;font-family:'DM Mono',monospace;color:var(--text3)}
+
+/* ENGINE BADGE */
+.engine-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);background:var(--bg3);cursor:pointer;transition:all .2s;font-size:11px;font-weight:500;color:var(--text3);user-select:none}
+.engine-badge:hover{border-color:var(--border2);background:var(--bg4)}
+.engine-badge.active{border-color:var(--accent);color:var(--accent);background:var(--glow)}
+.engine-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);transition:background .3s}
+.engine-dot.checking{background:var(--amber);animation:pulse .8s infinite alternate}
+.engine-dot.online{background:var(--green)}
+.engine-dot.offline{background:var(--coral)}
+@keyframes pulse{from{opacity:.4}to{opacity:1}}
+
+/* EMPTY STATE */
+.empty{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;opacity:.3}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.empty-text{font-size:12px;color:var(--text3)}
+
+/* CANVAS PAN/ZOOM */
+#canvas-viewport{position:absolute;inset:0;transform-origin:0 0;will-change:transform}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo">SMA <em>Logic Creator</em></div>
+  <div class="sep"></div>
+  <div class="step-pills">
+    <div class="step-pill active" id="pill-1">1 · Industry</div>
+    <div class="step-pill" id="pill-2">2 · Sectors</div>
+    <div class="step-pill" id="pill-3">3 · Sub-paths</div>
+    <div class="step-pill" id="pill-4">4 · Targets</div>
+    <div class="step-pill" id="pill-5">5 · End routing</div>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="zoomIn()">+</button>
+    <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="zoomOut()">−</button>
+    <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px" onclick="resetZoom()">Fit</button>
+    <div class="sep"></div>
+    <button class="btn btn-ghost" onclick="resetWizard()">Reset</button>
+    <button class="btn btn-primary" id="buildBtn" onclick="buildFlow()" disabled>Build flow →</button>
+    <div class="sep"></div>
+    <div id="engine-badge" class="engine-badge" title="Python Logic Engine status — click to toggle Engine / Local mode" onclick="toggleEngineMode()">
+      <span id="engine-dot" class="engine-dot checking"></span>
+      <span id="engine-label">Engine</span>
+    </div>
+  </div>
+</header>
+
+<!-- LEFT WIZARD -->
+<aside class="wizard" id="wizard">
+
+  <!-- STEP 1 — INDUSTRY -->
+  <div class="wiz-section expanded" id="sec-1">
+    <div class="wiz-section-head" onclick="toggleSec(1)">
+      <div class="wiz-num active" id="num-1">1</div>
+      <div>
+        <div class="wiz-section-title">Industry sector</div>
+        <div class="wiz-section-sub">Select the manufacturing domain</div>
+      </div>
+      <span class="wiz-chevron">▾</span>
+    </div>
+    <div class="wiz-body">
+      <div class="industry-grid">
+        <div class="industry-card" onclick="selectIndustry('manufacturing',this)">
+          <div class="ic-icon">⚙️</div>
+          <div class="ic-label">Manufacturing</div>
+          <div class="ic-sub">Production, assembly, parameter optimisation, RCA</div>
+        </div>
+        <div class="industry-card" onclick="selectIndustry('remanufacturing',this)">
+          <div class="ic-icon">♻️</div>
+          <div class="ic-label">Remanufacturing</div>
+          <div class="ic-sub">Circular economy, core recovery, R-strategy selection</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 — FLOW SECTIONS -->
+  <div class="wiz-section collapsed" id="sec-2">
+    <div class="wiz-section-head" onclick="toggleSec(2)">
+      <div class="wiz-num" id="num-2">2</div>
+      <div>
+        <div class="wiz-section-title">Main flow sections</div>
+        <div class="wiz-section-sub">Enable or disable each phase</div>
+      </div>
+      <span class="wiz-chevron">▾</span>
+    </div>
+    <div class="wiz-body" id="sections-body"></div>
+  </div>
+
+  <!-- STEP 3 — SUB-PATHS -->
+  <div class="wiz-section collapsed" id="sec-3">
+    <div class="wiz-section-head" onclick="toggleSec(3)">
+      <div class="wiz-num" id="num-3">3</div>
+      <div>
+        <div class="wiz-section-title">Sub-paths</div>
+        <div class="wiz-section-sub">Configure paths within each active section</div>
+      </div>
+      <span class="wiz-chevron">▾</span>
+    </div>
+    <div class="wiz-body" id="subpaths-body"></div>
+  </div>
+
+  <!-- STEP 4 — TARGETS -->
+  <div class="wiz-section collapsed" id="sec-4">
+    <div class="wiz-section-head" onclick="toggleSec(4)">
+      <div class="wiz-num" id="num-4">4</div>
+      <div>
+        <div class="wiz-section-title">Targets &amp; thresholds</div>
+        <div class="wiz-section-sub">Define objectives and decision thresholds</div>
+      </div>
+      <span class="wiz-chevron">▾</span>
+    </div>
+    <div class="wiz-body" id="targets-body"></div>
+  </div>
+
+  <!-- STEP 5 — END ROUTING -->
+  <div class="wiz-section collapsed" id="sec-5">
+    <div class="wiz-section-head" onclick="toggleSec(5)">
+      <div class="wiz-num" id="num-5">5</div>
+      <div>
+        <div class="wiz-section-title">End-state routing</div>
+        <div class="wiz-section-sub">Define failure and terminal paths</div>
+      </div>
+      <span class="wiz-chevron">▾</span>
+    </div>
+    <div class="wiz-body" id="scrap-body"></div>
+  </div>
+
+</aside>
+
+<!-- RIGHT: CANVAS + JSON -->
+<div class="right">
+  <div class="canvas-wrap" id="canvasWrap">
+    <canvas id="grid-bg"></canvas>
+    <svg id="svg-layer" width="100%" height="100%">
+      <defs>
+        <marker id="ah"   markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#343840"/></marker>
+        <marker id="ah-g" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#3ecf8e"/></marker>
+        <marker id="ah-r" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f87171"/></marker>
+        <marker id="ah-a" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#f59e0b"/></marker>
+        <marker id="ah-b" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4f7fff"/></marker>
+      </defs>
+    </svg>
+    <div id="canvas-viewport">
+      <div id="nodes-layer"></div>
+    </div>
+    <div class="empty" id="emptyState">
+      <div class="empty-icon">◈</div>
+      <div class="empty-text">Complete the wizard and click "Build flow"</div>
+    </div>
+  </div>
+  <div class="json-panel">
+    <div class="json-header">
+      <div class="out-tabs">
+        <button class="out-tab active" id="tab-json" onclick="switchTab('json')">JSON</button>
+        <button class="out-tab" id="tab-yaml" onclick="switchTab('yaml')">YAML <span style="font-size:8px;opacity:.6;margin-left:2px">agent-ready</span></button>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="copyActive()">Copy</button>
+        <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="downloadActive()">Download</button>
+      </div>
+    </div>
+    <div class="json-scroll" id="jsonOut">// Build the flow to generate output</div>
+    <div class="json-scroll" id="yamlOut" style="display:none">// Build the flow to generate output</div>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// ENGINE MODE
+// ══════════════════════════════════════════════════════
+const ENGINE_URL = 'http://localhost:8765';
+let engineOnline  = false;  // becomes true once /health responds
+let engineMode    = false;  // user-chosen: use engine or local JS
+
+async function checkEngine() {
+  try {
+    const r = await fetch(ENGINE_URL + '/health', { signal: AbortSignal.timeout(1500) });
+    if (r.ok) {
+      engineOnline = true;
+      setEngineBadge('online');
+      return;
+    }
+  } catch(_) {}
+  engineOnline = false;
+  engineMode   = false;
+  setEngineBadge('offline');
+}
+
+function setEngineBadge(status) {
+  const dot   = document.getElementById('engine-dot');
+  const label = document.getElementById('engine-label');
+  const badge = document.getElementById('engine-badge');
+  dot.className = 'engine-dot ' + status;
+  if (status === 'online') {
+    label.textContent = engineMode ? 'Engine ON' : 'Engine';
+    badge.classList.toggle('active', engineMode);
+  } else if (status === 'offline') {
+    label.textContent = 'Local';
+    badge.classList.remove('active');
+  } else {
+    label.textContent = 'Engine…';
+  }
+}
+
+function toggleEngineMode() {
+  if (!engineOnline) { checkEngine(); return; }
+  engineMode = !engineMode;
+  setEngineBadge('online');
+}
+
+// Poll engine health every 5 s
+checkEngine();
+setInterval(checkEngine, 5000);
+
+// ══════════════════════════════════════════════════════
+// STATE & DEFINITIONS
+// ══════════════════════════════════════════════════════
+let state = { industry:null, sections:{}, subpaths:{}, targets:{}, scrap:{} };
+let canvasNodes=[], canvasEdges=[];
+let dragging=null, dragOffset={x:0,y:0};
+let vpScale=1, vpX=0, vpY=0;
+let isPanning=false, panStart={x:0,y:0}, panOrigin={x:0,y:0};
+
+const SECTIONS = {
+  manufacturing:[
+    { id:'planning',label:'Planning',color:'#4f7fff',
+      desc:'Work orders, prioritisation, scheduling, target input (COST · TIME · PRODUCTIVITY)',
+      subpaths:[
+        {id:'scheduling',   label:'Scheduling agent',      desc:'Sequence · Takt · OEE · Priority — pulls from Orders DB',def:true},
+        {id:'material',     label:'Material intake',       desc:'Lots · COA · Stock check → Procurement agent on fail',def:true},
+        {id:'parameters',   label:'Parameter optimisation',desc:'AI-set Speed · Temp · Torque · pH from historical data',def:true},
+        {id:'qpredict',     label:'Quality predictor',     desc:'Monte Carlo forecast before first part runs',def:true},
+      ]},
+    { id:'failures',label:'Failure Analysis',color:'#f87171',
+      desc:'Anomaly detection, RCA, machine integration, auto-fix or manual dispatch',
+      subpaths:[
+        {id:'analyse',      label:'Analyse anomaly',       desc:'Classify defect type · Severity gate · DB lookup',def:true},
+        {id:'rca',          label:'RCA agent',             desc:'Rank root causes by probability × risk · Top 3 surfaced',def:true},
+        {id:'machineint',   label:'Machine integration',   desc:'Direct PLC/SCADA command execution and YES/NO feedback',def:true},
+        {id:'autofix',      label:'Auto-fix / dispatch',   desc:'Digital PLC command or AR checklist to technician',def:true},
+      ]},
+    { id:'quality',label:'Quality Control',color:'#2dd4bf',
+      desc:'Real-time monitoring, deviation detection, QA inspection, release',
+      subpaths:[
+        {id:'monitoring',   label:'Monitoring agent',      desc:'Sensors · Vision · OEE live stream against tolerance',def:true},
+        {id:'deviation',    label:'Deviation triage',      desc:'Gate → adaptive correction loop or continue',def:true},
+        {id:'inspection',   label:'Quality inspector',     desc:'Score · Inspect · Report per unit or batch',def:true},
+        {id:'release',      label:'Release',               desc:'Sign-off · Serial · Dispatch on QA pass',def:true},
+      ]},
+  ],
+  remanufacturing:[
+    { id:'intake',label:'Core intake',color:'#4f7fff',
+      desc:'Registration, traceability, disassembly, component & core identification',
+      subpaths:[
+        {id:'registration', label:'Core registration',     desc:'QR · Serial · Core ID validated against DB',def:true},
+        {id:'disassembly',  label:'Disassembly',           desc:'Structured disassembly guided by DB/KB',def:true},
+        {id:'coreident',    label:'Core identification',   desc:'Core condition check against Indicators DB',def:true},
+        {id:'compident',    label:'Component identification',desc:'Component-level condition check with DB/KB',def:true},
+      ]},
+    { id:'assessment',label:'Condition assessment',color:'#2dd4bf',
+      desc:'Multi-indicator condition assessment using Indicators DB (COST · TIME · CO2)',
+      subpaths:[
+        {id:'condassess',   label:'Condition assessment',  desc:'COST · TIME · CO2 indicators from Indicators DB',def:true},
+        {id:'remanassess',  label:'Remanufacture assessment',desc:'Structural + performance score → remanufacturable?',def:true},
+      ]},
+    { id:'decision',label:'Strategy & execution',color:'#f59e0b',
+      desc:'R-strategy selection, component availability, repair execution, procurement',
+      subpaths:[
+        {id:'rstrategy',    label:'R-strategy selection',  desc:'Repair · Reuse · Remanufacture — via ERP/DB/KB',def:true},
+        {id:'components',   label:'Component availability',desc:'YES → Allocate Parts · NO → Trigger Procurement',def:true},
+        {id:'execution',    label:'Release for repair',    desc:'Work order issued · AR guidance · Checklists',def:true},
+      ]},
+    { id:'quality',label:'Quality, credit & certification',color:'#3ecf8e',
+      desc:'Quality & compliance assessment, pass/fail gate, credit release, certification report',
+      subpaths:[
+        {id:'qaassess',     label:'Quality & compliance assessment',desc:'Full inspection against standards',def:true},
+        {id:'qapass',       label:'Quality pass gate',     desc:'Pass → Release · Fail → Re-enter assessment',def:true},
+        {id:'credit',       label:'Credit release',        desc:'Deposit value calculated and released',def:true},
+        {id:'certreport',   label:'Certification report',  desc:'Final compliance report issued',def:true},
+      ]},
+    { id:'learning',label:'Knowledge & feedback',color:'#a78bfa',
+      desc:'Knowledge base update, training/feedback loop back to Industry Selector',
+      subpaths:[
+        {id:'kb',           label:'Knowledge base update', desc:'Metadata · Model update · Throughput metrics',def:true},
+        {id:'feedback',     label:'Training/feedback loop',desc:'Feeds back into next Remanufacturing intake cycle',def:true},
+      ]},
+  ],
+
+};
+
+const TARGETS = {
+  manufacturing:[
+    {id:'oee',      label:'OEE target',          unit:'%',    placeholder:'e.g. 85'},
+    {id:'yield',    label:'Yield target',         unit:'%',    placeholder:'e.g. 98'},
+    {id:'cycleTime',label:'Cycle time',           unit:'sec',  placeholder:'e.g. 45'},
+    {id:'scrapRate',label:'Scrap rate max',       unit:'%',    placeholder:'e.g. 2'},
+    {id:'mttr',     label:'MTTR target',          unit:'min',  placeholder:'e.g. 30'},
+    {id:'costUnit', label:'Cost per unit',        unit:'€',    placeholder:'e.g. 12.50'},
+    {id:'mtbf',     label:'MTBF target',          unit:'hrs',  placeholder:'e.g. 720'},
+    {id:'fpy',      label:'First pass yield',     unit:'%',    placeholder:'e.g. 96'},
+  ],
+  remanufacturing:[
+    {id:'recovery', label:'Recovery rate',        unit:'%',    placeholder:'e.g. 78'},
+    {id:'costThresh',label:'Cost threshold',      unit:'€',    placeholder:'e.g. 50'},
+    {id:'condScore',label:'Min condition score',  unit:'0–100',placeholder:'e.g. 45'},
+    {id:'cycleTime',label:'Repair cycle time',    unit:'hrs',  placeholder:'e.g. 4'},
+    {id:'creditVal',label:'Base credit value',    unit:'€',    placeholder:'e.g. 120'},
+    {id:'qaPasRate',label:'QA pass rate target',  unit:'%',    placeholder:'e.g. 95'},
+    {id:'co2target',label:'CO2 reduction target', unit:'kg',   placeholder:'e.g. 12'},
+    {id:'reutilRate',label:'Component reuse rate',unit:'%',    placeholder:'e.g. 65'},
+  ],
+
+};
+
+const SCRAP_OPTIONS = {
+  manufacturing:[
+    {id:'rework',    label:'Rework loop',          desc:'Failed units re-enter sub-assembly station'},
+    {id:'scrap',     label:'Scrap & log',           desc:'Unit scrapped · Material value calculated and logged'},
+    {id:'quarantine',label:'Quarantine hold',       desc:'Unit isolated pending engineering review'},
+    {id:'supplier',  label:'Supplier notification', desc:'Bad batch flagged to supplier automatically'},
+  ],
+  remanufacturing:[
+    {id:'recycle',   label:'Recycle / scrap flow',  desc:'Material value calculated · Sent to recycler'},
+    {id:'scrap',     label:'Scrap inventory update',desc:'Update scrap inventory · Log material yield'},
+    {id:'partial',   label:'Partial salvage',       desc:'Recoverable components extracted before scrap'},
+    {id:'return',    label:'Return to supplier',    desc:'Core returned to vendor with defect report'},
+  ],
+
+};
+
+// ══════════════════════════════════════════════════════
+// NODE TYPE STYLES
+// ══════════════════════════════════════════════════════
+const NT = {
+  process:  {color:'#4f7fff', bg:'#0d1525', tag:'PROC'},
+  agent:    {color:'#a78bfa', bg:'#120f22', tag:'AGNT'},
+  decision: {color:'#f59e0b', bg:'#1a1200', tag:'GATE'},
+  output:   {color:'#3ecf8e', bg:'#0a1a12', tag:'OUT'},
+  knowledge:{color:'#f87171', bg:'#1a0e0e', tag:'KB'},
+  intake:   {color:'#4f7fff', bg:'#0d1525', tag:'IN'},
+  quality:  {color:'#2dd4bf', bg:'#091a18', tag:'QA'},
+  db:       {color:'#555a66', bg:'#111214', tag:'DB'},
+};
+
+// ══════════════════════════════════════════════════════
+// WIZARD NAVIGATION
+// ══════════════════════════════════════════════════════
+function toggleSec(n) {
+  const sec = document.getElementById('sec-'+n);
+  sec.classList.toggle('collapsed'); sec.classList.toggle('expanded');
+}
+function openSec(n) {
+  const sec = document.getElementById('sec-'+n);
+  sec.classList.remove('collapsed'); sec.classList.add('expanded');
+  document.getElementById('num-'+n).classList.add('active');
+  document.getElementById('pill-'+n).classList.add('active');
+}
+function doneSec(n) {
+  const num = document.getElementById('num-'+n);
+  num.classList.remove('active'); num.classList.add('done'); num.textContent='✓';
+  document.getElementById('pill-'+n).classList.remove('active');
+  document.getElementById('pill-'+n).classList.add('done');
+  const sec = document.getElementById('sec-'+n);
+  sec.classList.add('collapsed'); sec.classList.remove('expanded');
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 1
+// ══════════════════════════════════════════════════════
+function selectIndustry(ind, el) {
+  state.industry = ind;
+  document.querySelectorAll('.industry-card').forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+  doneSec(1); buildStep2(); openSec(2);
+}
+
+// ══════════════════════════════════════════════════════
+// STEP 2
+// ══════════════════════════════════════════════════════
+function buildStep2() {
+  const body = document.getElementById('sections-body');
+  const sections = SECTIONS[state.industry];
+  sections.forEach(s=>{ if(state.sections[s.id]===undefined) state.sections[s.id]=true; });
+  body.innerHTML = '<div class="toggle-label">Enable or disable each flow phase</div>';
+  sections.forEach(s=>{
+    body.innerHTML += `
+      <div class="toggle-row ${state.sections[s.id]?'enabled':''}" id="tr-${s.id}">
+        <div class="toggle-row-info">
+          <div class="toggle-row-name" style="color:${s.color}">${s.label}</div>
+          <div class="toggle-row-desc">${s.desc}</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" ${state.sections[s.id]?'checked':''} onchange="toggleSection('${s.id}',this.checked)">
+          <div class="toggle-track"></div><div class="toggle-thumb"></div>
+        </label>
+      </div>`;
+  });
+  body.innerHTML += `<button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="confirmSections()">Confirm sections →</button>`;
+}
+function toggleSection(id,val) {
+  state.sections[id]=val;
+  const row=document.getElementById('tr-'+id);
+  if(row) row.classList.toggle('enabled',val);
+}
+function confirmSections() { doneSec(2); buildStep3(); openSec(3); }
+
+// ══════════════════════════════════════════════════════
+// STEP 3
+// ══════════════════════════════════════════════════════
+function buildStep3() {
+  const body=document.getElementById('subpaths-body');
+  const sections=SECTIONS[state.industry].filter(s=>state.sections[s.id]);
+  body.innerHTML='';
+  sections.forEach(s=>{
+    if(!state.subpaths[s.id]) state.subpaths[s.id]={};
+    s.subpaths.forEach(p=>{ if(state.subpaths[s.id][p.id]===undefined) state.subpaths[s.id][p.id]=p.def; });
+    body.innerHTML += `
+      <div class="sub-options" style="margin-bottom:8px">
+        <div class="sub-opt-title" style="color:${s.color}">▸ ${s.label}</div>
+        ${s.subpaths.map(p=>`
+          <label class="check-row">
+            <input type="checkbox" ${state.subpaths[s.id][p.id]?'checked':''} onchange="toggleSubpath('${s.id}','${p.id}',this.checked)">
+            <div><div class="check-text">${p.label}</div><div class="check-sub">${p.desc}</div></div>
+          </label>`).join('')}
+      </div>`;
+  });
+  body.innerHTML += `<button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="confirmSubpaths()">Confirm sub-paths →</button>`;
+}
+function toggleSubpath(secId,pathId,val) {
+  if(!state.subpaths[secId]) state.subpaths[secId]={};
+  state.subpaths[secId][pathId]=val;
+}
+function confirmSubpaths() { doneSec(3); buildStep4(); openSec(4); }
+
+// ══════════════════════════════════════════════════════
+// STEP 4
+// ══════════════════════════════════════════════════════
+function buildStep4() {
+  const body=document.getElementById('targets-body');
+  const targets=TARGETS[state.industry];
+  body.innerHTML=`<div class="toggle-label" style="margin-bottom:8px">Define operational targets (optional)</div><div class="target-grid">`;
+  targets.forEach(t=>{
+    body.innerHTML+=`
+      <div class="target-card">
+        <div class="target-label">${t.label}</div>
+        <input class="target-input" type="text" placeholder="${t.placeholder}" value="${state.targets[t.id]||''}" oninput="state.targets['${t.id}']=this.value">
+        <div class="target-unit">${t.unit}</div>
+      </div>`;
+  });
+  body.innerHTML+=`</div><button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="confirmTargets()">Confirm targets →</button>`;
+}
+function confirmTargets() { doneSec(4); buildStep5(); openSec(5); }
+
+// ══════════════════════════════════════════════════════
+// STEP 5
+// ══════════════════════════════════════════════════════
+function buildStep5() {
+  const body=document.getElementById('scrap-body');
+  const opts=SCRAP_OPTIONS[state.industry];
+  opts.forEach(o=>{ if(state.scrap[o.id]===undefined) state.scrap[o.id]=true; });
+  body.innerHTML=`<div class="toggle-label">Select end-state routing paths</div>`;
+  opts.forEach(o=>{
+    body.innerHTML+=`
+      <div class="toggle-row ${state.scrap[o.id]?'enabled':''}" id="tr-scrap-${o.id}">
+        <div class="toggle-row-info">
+          <div class="toggle-row-name">${o.label}</div>
+          <div class="toggle-row-desc">${o.desc}</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" ${state.scrap[o.id]?'checked':''} onchange="toggleScrap('${o.id}',this.checked)">
+          <div class="toggle-track"></div><div class="toggle-thumb"></div>
+        </label>
+      </div>`;
+  });
+  body.innerHTML+=`<button class="btn btn-primary" style="width:100%;margin-top:12px" onclick="confirmScrap()">Done — build flow →</button>`;
+}
+function toggleScrap(id,val) {
+  state.scrap[id]=val;
+  const row=document.getElementById('tr-scrap-'+id);
+  if(row) row.classList.toggle('enabled',val);
+}
+function confirmScrap() { doneSec(5); document.getElementById('buildBtn').disabled=false; buildFlow(); }
+
+// ══════════════════════════════════════════════════════
+// BUILD FLOW  (Engine-first, local JS fallback)
+// ══════════════════════════════════════════════════════
+async function buildFlow() {
+  canvasNodes=[]; canvasEdges=[];
+  document.getElementById('nodes-layer').innerHTML='';
+  document.getElementById('svg-layer').querySelectorAll('.edge,.edge-lbl').forEach(e=>e.remove());
+  document.getElementById('emptyState').style.display='none';
+  drawGrid();
+
+  if (engineOnline && engineMode) {
+    await buildFlowViaEngine();
+  } else {
+    buildFlowLocal();
+  }
+}
+
+// ── Engine path ──────────────────────────────────────
+async function buildFlowViaEngine() {
+  // Build payload that matches WizardState schema
+  const payload = {
+    industry:    state.industry,
+    sections:    state.sections,
+    subpaths:    state.subpaths,
+    targets:     state.targets,
+    end_routing: state.scrap,
+  };
+  try {
+    const r = await fetch(ENGINE_URL + '/api/flow/build', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) throw new Error('Engine returned ' + r.status);
+    const data = await r.json();
+    // data = { nodes:[...], edges:[...], logic_block:{...} }
+    canvasNodes = data.nodes.map(n => ({
+      id: n.id, type: n.type, label: n.label, desc: n.desc,
+      x: n.x, y: n.y, color: n.color, bg: n.bg, tag: n.tag
+    }));
+    canvasEdges = data.edges.map(e => ({ from: e.from, to: e.to, type: e.type }));
+    _lastLogic  = data.logic_block;
+    renderAllNodes();
+    setTimeout(() => {
+      renderEdges();
+      setTimeout(() => {
+        autoFitViewport();
+        // Display the engine-returned logic block directly
+        document.getElementById('jsonOut').innerHTML =
+          syntaxHLJSON(JSON.stringify(_lastLogic, null, 2));
+        const yamlStr =
+          '# SMA Logic Block — Agent-Ready YAML\n'
+          + '# Generated by Logic Engine: ' + new Date().toISOString() + '\n\n'
+          + jsonToYaml(_lastLogic);
+        document.getElementById('yamlOut').innerHTML = syntaxHLYAML(yamlStr);
+      }, 100);
+    }, 80);
+  } catch (err) {
+    console.warn('Engine call failed, falling back to local JS:', err.message);
+    buildFlowLocal();
+  }
+}
+
+// ── Local JS path (original behaviour) ───────────────
+function buildFlowLocal() {
+  const builders = {manufacturing:buildMfgFlow,remanufacturing:buildRemanFlow};
+  if(builders[state.industry]) builders[state.industry]();
+  renderAllNodes();
+  setTimeout(()=>{ renderEdges(); setTimeout(()=>{ autoFitViewport(); generateJSON(); },100); },80);
+}
+
+// Minimal JSON → YAML converter for the engine-returned logic block
+function jsonToYaml(obj, indent=0) {
+  return toYAML(obj, indent);
+}
+
+// ══════════════════════════════════════════════════════
+// MANUFACTURING FLOW — matches reference diagram
+// Layout:
+//   Col A (left)   x=100  — Planning
+//   Col B (centre) x=480  — Failure Analysis
+//   Col C (right)  x=820  — Quality Control
+//   Bottom shared         — Target Achieved → KB → Feedback
+// ══════════════════════════════════════════════════════
+function buildMfgFlow(){
+  const cA=100, cB=480, cC=820;
+  const rowH=120;
+  const sp=state.subpaths;
+  const add=(id,type,label,desc,x,y)=>canvasNodes.push({id,type,label,desc,x,y,color:NT[type].color,bg:NT[type].bg,tag:NT[type].tag});
+  const edge=(f,t,et)=>canvasEdges.push({from:f,to:t,type:et||'main'});
+
+  // ── INDUSTRY SELECTOR ───────────────────────────────
+  const topCx = cB + 50;
+  add('industry','process','Industry Selector','Manufacturing sector selected', topCx, 20);
+
+  // ── MANUFACTURING HEADER ────────────────────────────
+  add('mfg','process','Manufacturing','Active manufacturing sector', topCx, 140);
+  edge('industry','mfg','main');
+
+  // ── 3 COLUMN HEADERS ───────────────────────────────
+  const hY = 270;
+  add('hdr-plan','quality',   'Planning',        'Prioritisation · Scheduling · Target input', cA,  hY);
+  add('hdr-fail','knowledge', 'Failure Analysis','Analyse · RCA · Machine Integration',        cB,  hY);
+  add('hdr-qual','quality',   'Quality Control', 'Inspection · Quality pass · Release',        cC,  hY);
+  edge('mfg','hdr-plan','main');
+  edge('mfg','hdr-fail','main');
+  edge('mfg','hdr-qual','main');
+
+  // ── ORDERS DB + TARGET INPUT LIST (beside Planning) ──
+  add('orders-db',   'db','Orders',          'ERP production orders',            cA-160, hY+20);
+  add('target-input','db','Target Input\nCOST · TIME\nPRODUCTIVITY','Operator KPI targets', cA-160, hY+130);
+
+  // ══ PLANNING COLUMN ══════════════════════════════════
+  let pY = hY + rowH;
+
+  // Prioritisation
+  add('prioritise','agent','Prioritisation','Orders ranked by COST · TIME · PRODUCTIVITY', cA, pY);
+  edge('hdr-plan','prioritise');
+  edge('orders-db','prioritise','db');
+  edge('target-input','prioritise','db');
+  pY += rowH;
+
+  // Scheduling
+  if((sp.planning||{}).scheduling!==false){
+    add('sched','agent','Scheduling','Sequence · Takt · OEE · Priority', cA, pY);
+    edge('prioritise','sched');
+    pY += rowH;
+  }
+
+  // Material intake
+  if((sp.planning||{}).material!==false){
+    add('mat-gate','decision','Material / Resource OK?','Stock · Tooling · Calibration check', cA, pY);
+    edge((sp.planning||{}).scheduling!==false?'sched':'prioritise','mat-gate');
+    add('proc','agent','Procurement Agent','Reorder · Substitute · Hold', cA-200, pY+20);
+    edge('mat-gate','proc','no');
+    pY += rowH;
+  }
+
+  // Parameter optimisation
+  if((sp.planning||{}).parameters!==false){
+    add('param','agent','Parameter Optimisation','Speed · Temp · Torque · pH — AI-set', cA, pY);
+    const prev=(sp.planning||{}).material!==false?'mat-gate':(sp.planning||{}).scheduling!==false?'sched':'prioritise';
+    edge(prev,'param',(sp.planning||{}).material!==false?'yes':'main');
+    pY += rowH;
+  }
+
+  // Quality predictor
+  if((sp.planning||{}).qpredict!==false){
+    add('qpred','agent','Quality Predictor','Monte Carlo · Risk flag · High-risk review', cA, pY);
+    const prev=(sp.planning||{}).parameters!==false?'param':(sp.planning||{}).material!==false?'mat-gate':'prioritise';
+    edge(prev,'qpred',(sp.planning||{}).material!==false&&(sp.planning||{}).parameters===false?'yes':'main');
+    pY += rowH;
+  }
+
+  const pBottom = pY; // bottom of planning col
+
+  // ══ FAILURE ANALYSIS COLUMN ══════════════════════════
+  let fY = hY + rowH;
+
+  // Analyse
+  if((sp.failures||{}).analyse!==false){
+    add('anal','agent','Analyse','Classify defect type · Severity · DB lookup', cB, fY);
+    edge('hdr-fail','anal');
+    fY += rowH;
+  }
+
+  // DB for RCA (side)
+  add('rca-db','db','DB','Historical failure patterns', cB-160, fY+20);
+
+  // RCA
+  if((sp.failures||{}).rca!==false){
+    add('rca','agent','RCA','Rank root causes · Top 3 · Evidence links', cB, fY);
+    edge((sp.failures||{}).analyse!==false?'anal':'hdr-fail','rca');
+    edge('rca-db','rca','db');
+    fY += rowH;
+  }
+
+  // Machine Integration (decision node in image)
+  if((sp.failures||{}).machineint!==false){
+    add('machint','decision','Machine Integration','YES → auto command · NO → dispatch', cB, fY);
+    edge((sp.failures||{}).rca!==false?'rca':(sp.failures||{}).analyse!==false?'anal':'hdr-fail','machint');
+    fY += rowH;
+  }
+
+  // Auto-fix / dispatch
+  if((sp.failures||{}).autofix!==false){
+    // YES path — auto correction
+    add('cmd','agent','Auto-correction','PLC · SCADA · Adjust setpoint', cB, fY);
+    if((sp.failures||{}).machineint!==false) edge('machint','cmd','yes');
+    // NO path — dispatch (side right)
+    add('dispatch','agent','Dispatch + AR guide','AR checklist · Skill match · Task assign', cB+220, fY-rowH+20);
+    if((sp.failures||{}).machineint!==false) edge('machint','dispatch','no');
+    fY += rowH;
+  }
+
+  // Optimisation — directly below machine integration/autofix
+  add('optim','agent','Optimisation','Tune params · KPI update · Model retrain', cB, fY);
+  const failPrev = (sp.failures||{}).autofix!==false?'cmd':(sp.failures||{}).machineint!==false?'machint':(sp.failures||{}).rca!==false?'rca':'hdr-fail';
+  edge(failPrev,'optim');
+  fY += rowH;
+
+  const fBottom = fY;
+
+  // ══ QUALITY CONTROL COLUMN ═══════════════════════════
+  let qY = hY + rowH;
+
+  // Quality Inspector
+  if((sp.quality||{}).inspection!==false){
+    add('qinsp','agent','Quality Inspector','Score · Inspect · Vision · Report', cC, qY);
+    edge('hdr-qual','qinsp');
+    qY += rowH;
+  }
+
+  // Quality Pass gate
+  add('qa-gate','decision','Quality Pass','Score threshold · Spec conformance', cC, qY);
+  edge((sp.quality||{}).inspection!==false?'qinsp':'hdr-qual','qa-gate');
+  qY += rowH;
+
+  // NO → Report Generation (right side) → feeds RCA
+  add('rpt-qa','output','Report Generation','QA fail report · Defect summary', cC+220, qY-rowH+20);
+  edge('qa-gate','rpt-qa','no');
+  if(canvasNodes.find(n=>n.id==='rca')) edge('rpt-qa','rca','main');
+
+  // YES → Release
+  if((sp.quality||{}).release!==false){
+    add('release','output','Release','Sign-off · Serial · Dispatch', cC, qY);
+    edge('qa-gate','release','yes');
+    qY += rowH;
+  }
+
+  const qBottom = qY;
+
+  // ══ SHARED BOTTOM: TARGET ACHIEVED ═══════════════════
+  const sharedY = Math.max(pBottom, fBottom, qBottom) + rowH;
+  const midX = cB + 50;
+
+  add('tgt-gate','decision','Target Achieved','KPI vs threshold · All targets met?', midX, sharedY);
+  // Release → Target Achieved
+  if(canvasNodes.find(n=>n.id==='release')) edge('release','tgt-gate','main');
+  // Optimisation → Target Achieved
+  edge('optim','tgt-gate','main');
+
+  // NO → Report Generation (left)
+  add('rpt-tgt','output','Report Generation','KPI summary · Targets archive', midX-240, sharedY+20);
+  edge('tgt-gate','rpt-tgt','no');
+
+  // YES → Parameter Tuning (right)
+  add('param-tune','agent','Parameter Tuning','Fine-tune setpoints · Historical calibration', midX+240, sharedY+20);
+  edge('tgt-gate','param-tune','yes');
+
+  // Knowledge Base & Feedback
+  const kbY = sharedY + rowH + 20;
+  add('kb','knowledge','Knowledge Base\n& Training/Feedback loop','Neural cache · Model retrain · Mfg DB · Dashboard', midX, kbY);
+  edge('rpt-tgt','kb','main');
+  edge('param-tune','kb','main');
+
+  // Feedback loop back to Manufacturing header (dashed blue)
+  canvasEdges.push({from:'kb', to:'mfg', type:'feedback'});
+
+  // ══ END ROUTING ══════════════════════════════════════
+  const endX = cC+240; let ey = qBottom + rowH;
+  Object.entries(state.scrap).forEach(([id,val])=>{
+    if(!val) return;
+    const defs={
+      rework:    {label:'Rework loop',    desc:'Failed units re-enter sub-assembly'},
+      scrap:     {label:'Scrap & log',    desc:'Unit scrapped · Material value logged'},
+      quarantine:{label:'Quarantine',     desc:'Hold for engineering review'},
+      supplier:  {label:'Supplier alert', desc:'Batch flagged to supplier automatically'}
+    };
+    const d=defs[id]||{label:id,desc:''};
+    add('end-'+id,'output',d.label,d.desc,endX,ey); ey+=90;
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// REMANUFACTURING FLOW — matches reference diagram
+// Single vertical spine with side nodes, mirroring the
+// left column of the reference image.
+// ══════════════════════════════════════════════════════
+function buildRemanFlow(){
+  const cx=200, rowH=120;
+  const sp=state.subpaths, sec=state.sections;
+  let y=20;
+  const add=(id,type,label,desc,x,ny)=>canvasNodes.push({id,type,label,desc,x:x??cx,y:ny??y,color:NT[type].color,bg:NT[type].bg,tag:NT[type].tag});
+  const edge=(f,t,et)=>canvasEdges.push({from:f,to:t,type:et||'main'});
+
+  // ── INDUSTRY SELECTOR ──────────────────────────────
+  add('industry','process','Industry Selector','Remanufacturing sector selected', cx, y); y+=rowH;
+
+  // ── REMANUFACTURING HEADER ──────────────────────────
+  add('reman-hdr','process','Remanufacturing','Circular economy core recovery', cx, y); y+=rowH;
+  edge('industry','reman-hdr','main');
+
+  // ── CORE IDENTIFICATION ─────────────────────────────
+  if(sec.intake!==false){
+    const sp2=sp.intake||{};
+
+    // DB side — YES/NO dashed
+    add('core-db','db','DB','Core validation database', cx-170, y+20);
+
+    add('core-id','process','Core Identification','QR · Serial · Core ID validated vs DB', cx, y);
+    edge('reman-hdr','core-id','main');
+    edge('core-db','core-id','db');
+    y+=rowH;
+
+    // Disassembly
+    if(sp2.disassembly!==false){
+      add('disass','process','Disassembly','Structured disassembly guided by DB/KB', cx, y);
+      edge('core-id','disass','main');
+      add('dis-db','db','DB/KB','Disassembly knowledge base', cx-170, y+20);
+      edge('dis-db','disass','db');
+      y+=rowH;
+    }
+
+    // Component Identification
+    if(sp2.compident!==false){
+      add('comp-id','process','Component Identification','Component-level condition check', cx, y);
+      edge(sp2.disassembly!==false?'disass':'core-id','comp-id','main');
+      add('comp-db','db','DB/KB','Component knowledge base', cx-170, y+20);
+      edge('comp-db','comp-id','db');
+      y+=rowH;
+    }
+
+    // Two parallel condition checks: Component Condition Check (left) + Core Condition Check (right)
+    if(sp2.coreident!==false){
+      const checkY = y;
+      add('comp-cond','process','Component Condition Check','Component degradation & wear assessment', cx-160, checkY);
+      add('core-cond','process','Core Condition Check','Structural integrity & geometry scan',   cx+160, checkY);
+      const prev = sp2.compident!==false?'comp-id':sp2.disassembly!==false?'disass':'core-id';
+      edge(prev,'comp-cond','main');
+      edge(prev,'core-cond','main');
+      y = checkY + rowH;
+    }
+  }
+
+  // ── CONDITION ASSESSMENT ────────────────────────────
+  if(sec.assessment!==false){
+    const sp2=sp.assessment||{};
+
+    if(sp2.condassess!==false){
+      add('condass','output','Condition Assessment','COST · TIME · CO2 indicators evaluated', cx, y);
+      // feed from both condition checks if present, else from last intake node
+      const hasChecks = (sec.intake!==false)&&((sp.intake||{}).coreident!==false);
+      if(hasChecks){
+        edge('comp-cond','condass','main');
+        edge('core-cond','condass','main');
+      } else {
+        const prev = canvasNodes.find(n=>n.id==='comp-id')?'comp-id':canvasNodes.find(n=>n.id==='disass')?'disass':'reman-hdr';
+        edge(prev,'condass','main');
+      }
+      // Indicators DB side node with list
+      add('ind-db','db','Indicators DB\nCOST · TIME\nCO2','KPI indicators reference', cx+210, y+20);
+      edge('ind-db','condass','db');
+      y+=rowH;
+    }
+
+    if(sp2.remanassess!==false){
+      add('reman-ass','process','Reman Assessment','Structural + performance score', cx, y);
+      edge(sp2.condassess!==false?'condass':canvasNodes.find(n=>n.id==='core-cond')?'core-cond':'reman-hdr','reman-ass','main');
+      y+=rowH;
+
+      // Is remanufacturable? gate
+      add('reman-gate','decision','Is Remanufacturable?','Cost · Condition threshold check', cx, y);
+      edge('reman-ass','reman-gate','main');
+      y+=rowH;
+
+      // NO → Recycle/Scrap Flow (left side)
+      add('recycle','output','Recycle / Scrap Flow','Material value calc · Sent to recycler', cx-180, y-rowH+20);
+      edge('reman-gate','recycle','no');
+    }
+  }
+
+  // ── STRATEGY & EXECUTION ────────────────────────────
+  if(sec.decision!==false){
+    const sp2=sp.decision||{};
+    const gateNode=canvasNodes.find(n=>n.id==='reman-gate');
+    const prevD=gateNode?'reman-gate':'reman-ass';
+
+    if(sp2.rstrategy!==false){
+      add('rstrat','agent','R-Strategy Selection','Repair · Reuse · Remanufacture decision', cx, y);
+      edge(prevD,'rstrat',gateNode?'yes':'main');
+      add('erp-db','db','ERP/DB/KB','Strategy reference data', cx+210, y+20);
+      edge('erp-db','rstrat','db');
+      y+=rowH;
+    }
+
+    if(sp2.components!==false){
+      add('comp-avail','decision','Component Availability','In-stock check against work order', cx, y);
+      edge(sp2.rstrategy!==false?'rstrat':prevD,'comp-avail','main');
+      y+=rowH;
+
+      // NO → Trigger Procurement (right side)
+      add('trig-proc','agent','Trigger Procurement','Reorder · Substitute · Lead-time track', cx+240, y-rowH+20);
+      edge('comp-avail','trig-proc','no');
+
+      // YES → Allocate Parts
+      if(sp2.execution!==false){
+        add('alloc','agent','Allocate Parts','Inventory reservation · Pick list · Stage', cx, y);
+        edge('comp-avail','alloc','yes');
+        y+=rowH;
+      }
+    }
+
+    if(sp2.execution!==false){
+      add('exec','process','Release for Repair','Work order · AR guidance · Checklists', cx, y);
+      const prev=canvasNodes.find(n=>n.id==='alloc')?'alloc':canvasNodes.find(n=>n.id==='comp-avail')?'comp-avail':sp2.rstrategy!==false?'rstrat':prevD;
+      edge(prev,'exec','main');
+      y+=rowH;
+    }
+  }
+
+  // ── QUALITY & CERTIFICATION ─────────────────────────
+  if(sec.quality!==false){
+    const sp2=sp.quality||{};
+    const prevQ=canvasNodes.find(n=>n.id==='exec')?'exec':canvasNodes.find(n=>n.id==='alloc')?'alloc':'reman-gate';
+
+    if(sp2.qapass!==false){
+      add('qa-pass','decision','Quality & Compliance Pass','Full inspection against standards', cx, y);
+      edge(prevQ,'qa-pass','main');
+      y+=rowH;
+
+      // NO → Quality & Compliance Assessment (left) → loops back
+      if(sp2.qaassess!==false){
+        add('qa-assess','quality','Quality & Compliance Assessment','Re-assess against compliance criteria', cx-210, y-rowH+20);
+        edge('qa-pass','qa-assess','no');
+        edge('qa-assess','qa-pass','main'); // loop back
+      }
+    }
+
+    if(sp2.credit!==false){
+      add('credit','output','Crediting','Deposit value calculated & released', cx, y);
+      edge(sp2.qapass!==false?'qa-pass':'exec','credit',sp2.qapass!==false?'yes':'main');
+      y+=rowH;
+    }
+
+    // Report generation (beside crediting)
+    add('rpt-reman','output','Report Generation','Compliance · Summary · Archive', cx+240, y-rowH+20);
+    edge(sp2.credit!==false?'credit':sp2.qapass!==false?'qa-pass':'exec','rpt-reman','main');
+
+    if(sp2.certreport!==false){
+      add('cert-rpt','output','Certification Report','Final compliance report issued', cx, y);
+      edge(sp2.credit!==false?'credit':sp2.qapass!==false?'qa-pass':'exec','cert-rpt',sp2.qapass!==false&&!sp2.credit?'yes':'main');
+      y+=rowH;
+    }
+  }
+
+  // ── KNOWLEDGE & FEEDBACK ────────────────────────────
+  if(sec.learning!==false){
+    const sp2=sp.learning||{};
+    const prevL=canvasNodes.find(n=>n.id==='cert-rpt')?'cert-rpt':canvasNodes.find(n=>n.id==='credit')?'credit':canvasNodes.find(n=>n.id==='qa-pass')?'qa-pass':'reman-hdr';
+
+    if(sp2.kb!==false){
+      add('kb','knowledge','Knowledge Base\n& Training/Feedback loop','Metadata · Model update · Throughput · Dashboard', cx, y);
+      edge(prevL,'kb','main');
+      y+=rowH;
+    }
+
+    if(sp2.feedback!==false){
+      // Pink feedback loop back to Remanufacturing header
+      const kbNode=canvasNodes.find(n=>n.id==='kb');
+      if(kbNode) canvasEdges.push({from:'kb', to:'reman-hdr', type:'feedback'});
+    }
+  }
+
+  // ── END ROUTING ─────────────────────────────────────
+  const scrapX = cx + 440; let sy = canvasNodes.find(n=>n.id==='recycle')?.y || y;
+  sy += 100;
+  Object.entries(state.scrap).forEach(([id,val])=>{
+    if(!val) return;
+    const defs={
+      recycle: {label:'Recycle / Scrap Flow', desc:'Material value calc · To recycler'},
+      scrap:   {label:'Scrap Inventory',       desc:'Material yield tracked'},
+      partial: {label:'Partial Salvage',        desc:'Components extracted before scrap'},
+      return:  {label:'Return to Supplier',     desc:'Core returned with defect report'}
+    };
+    const d=defs[id]||{label:id,desc:''};
+    if(id!=='recycle'){ // recycle already placed inline
+      add('end-'+id,'output',d.label,d.desc,scrapX,sy); sy+=90;
+      if(canvasNodes.find(n=>n.id==='recycle')) edge('recycle','end-'+id,'main');
+    }
+  });
+}
+
+
+
+// ══════════════════════════════════════════════════════
+// RENDER NODES
+// ══════════════════════════════════════════════════════
+function renderAllNodes(){
+  const layer=document.getElementById('nodes-layer');
+  layer.innerHTML='';
+  canvasNodes.forEach(n=>renderNode(n));
+}
+
+function renderNode(n){
+  const el=document.createElement('div');
+  el.className='cnode';
+  el.id='cn-'+n.id;
+  el.style.cssText=`left:${n.x}px;top:${n.y}px;border-color:${n.color}44;background:${n.bg}`;
+  if(n.type==='db'){
+    el.style.cssText=`left:${n.x}px;top:${n.y}px;border-color:${n.color}33;background:${n.bg};min-width:80px;max-width:100px;opacity:0.7;font-style:italic`;
+  }
+  el.innerHTML=`
+    <div class="cnode-h">
+      <div class="cnode-dot" style="background:${n.color}"></div>
+      <div class="cnode-title">${n.label}</div>
+      <span class="cnode-tag" style="background:${n.color}18;color:${n.color};border:1px solid ${n.color}33">${n.tag}</span>
+    </div>
+    ${n.desc?`<div class="cnode-b">${n.desc}</div>`:''}
+    <div class="cnode-ports">
+      <div class="port-g"><div class="port" style="border-color:${n.color}44"></div></div>
+      <div class="port-g">
+        ${n.type==='decision'
+          ?`<span class="port-lbl" style="color:#3ecf8e">YES</span><span class="port-lbl" style="margin:0 3px">·</span><span class="port-lbl" style="color:#f87171">NO</span>`
+          :`<div class="port" style="border-color:${n.color}44"></div>`}
+      </div>
+    </div>`;
+  el.addEventListener('mousedown',e=>{
+    dragging=n.id;
+    const vp=document.getElementById('canvas-viewport');
+    const rect=vp.getBoundingClientRect();
+    dragOffset={x:(e.clientX-rect.left)/vpScale - n.x, y:(e.clientY-rect.top)/vpScale - n.y};
+    el.classList.add('dragging'); e.preventDefault(); e.stopPropagation();
+  });
+  document.getElementById('nodes-layer').appendChild(el);
+}
+
+document.addEventListener('mousemove',e=>{
+  if(dragging){
+    const n=canvasNodes.find(n=>n.id===dragging);
+    if(!n) return;
+    const vp=document.getElementById('canvas-viewport');
+    const rect=vp.getBoundingClientRect();
+    n.x=Math.max(0,(e.clientX-rect.left)/vpScale - dragOffset.x);
+    n.y=Math.max(0,(e.clientY-rect.top)/vpScale - dragOffset.y);
+    const el=document.getElementById('cn-'+dragging);
+    if(el){el.style.left=n.x+'px';el.style.top=n.y+'px';}
+    renderEdges(); return;
+  }
+  if(isPanning){
+    const dx=e.clientX-panStart.x, dy=e.clientY-panStart.y;
+    vpX=panOrigin.x+dx; vpY=panOrigin.y+dy;
+    applyViewport();
+  }
+});
+document.addEventListener('mouseup',()=>{
+  if(dragging){document.getElementById('cn-'+dragging)?.classList.remove('dragging');dragging=null;}
+  isPanning=false;
+});
+
+// PAN on canvas background
+document.getElementById('canvasWrap').addEventListener('mousedown',e=>{
+  if(e.target===document.getElementById('grid-bg')||e.target===document.getElementById('canvasWrap')||e.target===document.getElementById('canvas-viewport')){
+    isPanning=true; panStart={x:e.clientX,y:e.clientY}; panOrigin={x:vpX,y:vpY}; e.preventDefault();
+  }
+});
+
+// ZOOM on scroll
+document.getElementById('canvasWrap').addEventListener('wheel',e=>{
+  e.preventDefault();
+  const wrap=document.getElementById('canvasWrap').getBoundingClientRect();
+  const mx=e.clientX-wrap.left, my=e.clientY-wrap.top;
+  const delta=e.deltaY<0?1.1:0.9;
+  const newScale=Math.min(3,Math.max(0.2,vpScale*delta));
+  vpX=mx-(mx-vpX)*newScale/vpScale;
+  vpY=my-(my-vpY)*newScale/vpScale;
+  vpScale=newScale;
+  applyViewport();
+},{passive:false});
+
+function applyViewport(){
+  document.getElementById('canvas-viewport').style.transform=`translate(${vpX}px,${vpY}px) scale(${vpScale})`;
+  document.getElementById('svg-layer').style.transform=`translate(${vpX}px,${vpY}px) scale(${vpScale})`;
+  document.getElementById('svg-layer').style.transformOrigin='0 0';
+}
+
+function zoomIn(){vpScale=Math.min(3,vpScale*1.2);applyViewport();}
+function zoomOut(){vpScale=Math.max(0.15,vpScale/1.2);applyViewport();}
+function resetZoom(){autoFitViewport();}
+
+function autoFitViewport(){
+  if(!canvasNodes.length) return;
+  const wrap=document.getElementById('canvasWrap').getBoundingClientRect();
+  const maxX=canvasNodes.reduce((m,n)=>Math.max(m,n.x+220),0);
+  const maxY=canvasNodes.reduce((m,n)=>Math.max(m,n.y+100),0);
+  const scaleX=(wrap.width-60)/maxX, scaleY=(wrap.height-60)/maxY;
+  vpScale=Math.min(scaleX,scaleY,1);
+  vpX=30; vpY=30;
+  applyViewport();
+}
+
+// ══════════════════════════════════════════════════════
+// RENDER EDGES
+// ══════════════════════════════════════════════════════
+function getNodeRect(nodeId){
+  const n=canvasNodes.find(n=>n.id===nodeId); if(!n) return null;
+  const el=document.getElementById('cn-'+nodeId);
+  const w=el?el.offsetWidth:185, h=el?el.offsetHeight:70;
+  return {x:n.x,y:n.y,w,h,cx:n.x+w/2,cy:n.y+h/2,bottom:n.y+h,top:n.y,right:n.x+w,left:n.x};
+}
+
+function renderEdges(){
+  const svg=document.getElementById('svg-layer');
+  svg.querySelectorAll('.edge,.edge-lbl').forEach(e=>e.remove());
+  canvasEdges.forEach(e=>{
+    const fr=getNodeRect(e.from), to=getNodeRect(e.to); if(!fr||!to) return;
+    const isYes=e.type==='yes', isNo=e.type==='no', isFb=e.type==='feedback', isDb=e.type==='db';
+    const color=isYes?'#3ecf8e':isNo?'#f87171':isFb?'#4f7fff':isDb?'#555a66':'#343840';
+    const marker=isYes?'ah-g':isNo?'ah-r':isFb?'ah-b':isDb?'ah':'ah';
+    const dash=isNo?'6,3':isFb?'4,4':isDb?'3,3':'none';
+    const x1=fr.cx, y1=fr.bottom, x2=to.cx, y2=to.top;
+    const cpOff=Math.max(40,Math.abs(y2-y1)*0.45);
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',`M${x1},${y1} C${x1},${y1+cpOff} ${x2},${y2-cpOff} ${x2},${y2}`);
+    path.setAttribute('stroke',color);
+    path.setAttribute('stroke-width',isDb?'1':'1.5');
+    path.setAttribute('fill','none');
+    path.setAttribute('stroke-dasharray',dash);
+    path.setAttribute('marker-end',`url(#${marker})`);
+    path.setAttribute('opacity',isDb?'0.5':'1');
+    path.classList.add('edge'); svg.appendChild(path);
+    if(isYes||isNo||isFb){
+      const mx=(x1+x2)/2+10, my=(y1+y2)/2;
+      const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x',mx);txt.setAttribute('y',my);txt.setAttribute('fill',color);
+      txt.setAttribute('font-size','9');txt.setAttribute('font-family','DM Mono,monospace');txt.setAttribute('font-weight','500');
+      txt.textContent=isYes?'YES':isNo?'NO':'↺ feedback';txt.classList.add('edge-lbl');svg.appendChild(txt);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// AGENT CATALOGUE — tools + sub-agents per agent type
+// ══════════════════════════════════════════════════════
+const AGENT_CATALOGUE = {
+  // ── MANUFACTURING ──────────────────────────────────
+  sched: {
+    role: 'Sequences and prioritises production orders before execution begins',
+    goal: 'Minimise takt-time deviation and maximise OEE across all active lines',
+    instructions: [
+      'Pull open orders from ERP and rank by deadline, batch size, and changeover cost',
+      'Identify bottleneck machines and pre-schedule around planned maintenance windows',
+      'Re-sequence dynamically when rush orders arrive or machine availability changes',
+      'Output an ordered job list with estimated start/end times and assigned resources'
+    ],
+    sub_agents: [
+      { id: 'takt_calculator', role: 'Computes takt time per order from customer demand rate', tools: ['erp_query', 'calendar_api'] },
+      { id: 'bottleneck_detector', role: 'Identifies capacity constraints across the line', tools: ['sensor_stream_reader', 'machine_status_api'] }
+    ],
+    tools: ['erp_query', 'machine_status_api', 'calendar_api', 'schedule_writer']
+  },
+  param: {
+    role: 'Calculates and applies optimal machine parameters before each production run',
+    goal: 'Maximise yield and minimise scrap by setting evidence-based process parameters',
+    instructions: [
+      'Query historical run data for the same product/machine combination',
+      'Apply statistical optimisation (Bayesian or gradient) over the parameter space',
+      'Output a parameter set (speed, temperature, pressure, feed, pH, etc.) specific to this run',
+      'Flag parameter sets with low historical confidence for human review before commit'
+    ],
+    sub_agents: [
+      { id: 'historical_retriever', role: 'Retrieves past run records matching current product and machine state', tools: ['knowledge_base_query', 'timeseries_db'] },
+      { id: 'param_optimiser', role: 'Runs optimisation solver over the parameter space', tools: ['optimisation_solver', 'simulation_runner'] }
+    ],
+    tools: ['knowledge_base_query', 'timeseries_db', 'optimisation_solver', 'plc_write', 'scada_write']
+  },
+  qpred: {
+    role: 'Predicts output quality before the first part runs using Monte Carlo simulation',
+    goal: 'Surface high-risk production orders for human review before defects occur',
+    instructions: [
+      'Load proposed parameter set and current material/tooling state',
+      'Run Monte Carlo simulation (≥1000 iterations) sampling uncertainty distributions',
+      'Output predicted yield %, defect rate, and confidence interval',
+      'Raise a risk flag and pause for human approval if predicted yield falls below threshold'
+    ],
+    sub_agents: [
+      { id: 'monte_carlo_engine', role: 'Runs stochastic quality simulation', tools: ['simulation_runner', 'uncertainty_model'] },
+      { id: 'risk_classifier', role: 'Classifies forecast outputs into LOW / MEDIUM / HIGH risk bands', tools: ['threshold_evaluator'] }
+    ],
+    tools: ['simulation_runner', 'uncertainty_model', 'threshold_evaluator', 'human_review_trigger']
+  },
+  mon: {
+    role: 'Continuously monitors all sensor and vision streams during production',
+    goal: 'Detect deviations from tolerance bounds within one sensor cycle and raise alerts',
+    instructions: [
+      'Subscribe to all active IO-Link, PLC, and vision system streams for the current order',
+      'Compare each reading against upper and lower tolerance bounds in real time',
+      'Calculate OEE, yield %, cycle time, and scrap rate on a rolling window',
+      'Trigger deviation alert immediately when any KPI exits tolerance — do not wait for end of cycle'
+    ],
+    sub_agents: [
+      { id: 'sensor_aggregator', role: 'Normalises and timestamps raw sensor streams from multiple sources', tools: ['iolink_reader', 'plc_reader', 'scada_reader'] },
+      { id: 'vision_inspector', role: 'Runs AOI / camera frames through defect detection model', tools: ['camera_feed', 'vision_model_inference'] }
+    ],
+    tools: ['iolink_reader', 'plc_reader', 'scada_reader', 'camera_feed', 'vision_model_inference', 'alert_publisher']
+  },
+  adapt: {
+    role: 'Applies automatic corrective parameter adjustments when deviation is detected',
+    goal: 'Return output to within tolerance without halting the production line',
+    instructions: [
+      'Receive deviation alert with affected parameter, current value, and target range',
+      'Query knowledge base for previously successful corrections for this deviation pattern',
+      'Compute a corrective delta and apply it via PLC/SCADA command',
+      'Log correction event (cause, action, parameter delta, timestamp) for model retraining'
+    ],
+    sub_agents: [
+      { id: 'correction_planner', role: 'Selects correction strategy from historical resolution patterns', tools: ['knowledge_base_query', 'rule_engine'] },
+      { id: 'plc_commander', role: 'Writes corrected parameter values to machine controller', tools: ['plc_write', 'scada_write'] }
+    ],
+    tools: ['knowledge_base_query', 'rule_engine', 'plc_write', 'scada_write', 'event_logger']
+  },
+  qinsp: {
+    role: 'Performs post-production quality inspection and generates unit-level reports',
+    goal: 'Accurately classify each unit or batch as PASS or FAIL against defined QA criteria',
+    instructions: [
+      'Execute inspection protocol defined in QA pass criteria for this product type',
+      'Aggregate sensor scores, vision scores, and dimensional checks into a composite quality score',
+      'Apply pass/fail threshold and tag each unit with result, score, and inspection timestamp',
+      'Route failed units to triage and passed units to release — never skip routing step'
+    ],
+    sub_agents: [
+      { id: 'dimensional_checker', role: 'Validates physical dimensions against tolerance spec', tools: ['cmm_reader', 'vision_model_inference'] },
+      { id: 'score_aggregator', role: 'Combines sub-scores into a single composite quality score', tools: ['scoring_model'] }
+    ],
+    tools: ['cmm_reader', 'vision_model_inference', 'scoring_model', 'qa_report_writer', 'erp_update']
+  },
+  release: {
+    role: 'Finalises quality-approved units and dispatches them to the next stage',
+    goal: 'Ensure only QA-passed units leave the station with full traceability records',
+    instructions: [
+      'Confirm QA pass status before any release action',
+      'Assign serial number or batch ID and write traceability record to ERP',
+      'Generate dispatch note and trigger downstream logistics or WIP transfer',
+      'Update production KPI dashboard with completed unit count and yield metrics'
+    ],
+    sub_agents: [],
+    tools: ['erp_update', 'serial_number_generator', 'dispatch_trigger', 'kpi_dashboard_writer']
+  },
+  anal: {
+    role: 'Classifies detected anomalies by type and severity before routing to RCA',
+    goal: 'Correctly categorise every anomaly to ensure the right resolution path is taken',
+    instructions: [
+      'Receive anomaly signal with sensor ID, reading value, and timestamp',
+      'Classify defect type (vibration, thermal, dimensional, vision, process) using trained classifier',
+      'Assign severity level (LOW / MEDIUM / HIGH / CRITICAL) based on distance from tolerance and rate of change',
+      'Route CRITICAL anomalies directly to emergency stop; route others to RCA agent'
+    ],
+    sub_agents: [
+      { id: 'defect_classifier', role: 'Classifies anomaly type from sensor signature', tools: ['ml_classifier', 'feature_extractor'] },
+      { id: 'severity_scorer', role: 'Scores anomaly severity from deviation magnitude and trend', tools: ['trend_analyser', 'threshold_evaluator'] }
+    ],
+    tools: ['ml_classifier', 'feature_extractor', 'trend_analyser', 'threshold_evaluator', 'alert_publisher']
+  },
+  rca: {
+    role: 'Identifies and ranks the most probable root causes of a detected anomaly',
+    goal: 'Surface the top 3 root causes with probability scores so the correct fix is applied first',
+    instructions: [
+      'Collect sensor snapshot, log buffers, and recent parameter changes from the anomaly window',
+      'Compare current anomaly signature against the historical failure pattern library',
+      'Generate candidate root cause list and score each by probability × risk impact',
+      'Present top 3 causes with supporting evidence to the auto-fix gate or operator UI',
+      'If no historical match exists, escalate to human expert and flag as new pattern'
+    ],
+    sub_agents: [
+      { id: 'pattern_matcher', role: 'Matches current anomaly signature against historical failure patterns', tools: ['knowledge_base_query', 'vector_similarity_search'] },
+      { id: 'cause_ranker', role: 'Ranks candidate causes by Bayesian probability × risk score', tools: ['probability_model', 'risk_scorer'] }
+    ],
+    tools: ['knowledge_base_query', 'vector_similarity_search', 'probability_model', 'risk_scorer', 'timeseries_db', 'human_review_trigger']
+  },
+  machint: {
+    role: 'Interfaces directly with machine controllers to execute corrective commands',
+    goal: 'Apply corrective actions to PLC/SCADA systems with confirmation of execution',
+    instructions: [
+      'Receive corrective command from auto-fix gate (parameter ID, target value, direction)',
+      'Validate command against safe operating limits before writing',
+      'Write command to PLC or SCADA and await acknowledgement within timeout window',
+      'Confirm execution by reading back the updated parameter value',
+      'Log command, acknowledgement, and confirmation timestamp to event store'
+    ],
+    sub_agents: [],
+    tools: ['plc_write', 'plc_read', 'scada_write', 'scada_read', 'safe_limit_validator', 'event_logger']
+  },
+  cmd: {
+    role: 'Executes an automated correction command on the machine controller',
+    goal: 'Apply the identified fix immediately without halting production',
+    instructions: [
+      'Receive fix specification (parameter, target value, correction type) from RCA agent',
+      'Route to machine integration layer for PLC/SCADA execution',
+      'Monitor output for one cycle to confirm anomaly is cleared',
+      'Report resolution status back to validation gate'
+    ],
+    sub_agents: [],
+    tools: ['plc_write', 'scada_write', 'plc_read', 'event_logger']
+  },
+  dispatch: {
+    role: 'Dispatches a technician with a structured AR-guided checklist for manual fixes',
+    goal: 'Ensure the right technician receives the right instructions within response SLA',
+    instructions: [
+      'Receive manual fix recommendation and root cause summary from RCA agent',
+      'Select appropriate AR checklist template for the identified fault type',
+      'Assign to available technician based on skill match and proximity',
+      'Push checklist to technician AR device with fault location, steps, and required tools',
+      'Track checklist completion and feed result back to resolution validation gate'
+    ],
+    sub_agents: [
+      { id: 'checklist_builder', role: 'Assembles step-by-step AR repair checklist from fault type template', tools: ['checklist_template_store', 'ar_content_renderer'] },
+      { id: 'technician_dispatcher', role: 'Finds and assigns the best available technician', tools: ['workforce_management_api', 'notification_service'] }
+    ],
+    tools: ['checklist_template_store', 'ar_content_renderer', 'workforce_management_api', 'notification_service', 'task_tracker']
+  },
+  optim: {
+    role: 'Tunes process parameters and retrains models after each production cycle',
+    goal: 'Compound improvement cycle-over-cycle by feeding outcomes back into the intelligence layer',
+    instructions: [
+      'Collect cycle outcome data: yield, scrap rate, parameter drift, correction history',
+      'Run parameter auto-tuning to tighten setpoints based on observed performance',
+      'Submit new labelled examples to model retraining pipeline',
+      'Update KPI dashboard with latest OEE, MTTR, FPY, and cost-per-unit metrics',
+      'Generate shift report summarising deviations, corrections, and improvement trends'
+    ],
+    sub_agents: [
+      { id: 'model_retrainer', role: 'Submits new outcome data to model fine-tuning pipeline', tools: ['ml_training_api', 'dataset_writer'] },
+      { id: 'kpi_aggregator', role: 'Computes and publishes updated KPI metrics', tools: ['timeseries_db', 'kpi_dashboard_writer'] }
+    ],
+    tools: ['timeseries_db', 'kpi_dashboard_writer', 'ml_training_api', 'dataset_writer', 'report_generator']
+  },
+  proc: {
+    role: 'Handles procurement of materials or components when stock is insufficient',
+    goal: 'Restore stock levels without delaying the production schedule',
+    instructions: [
+      'Receive stock-out alert with item ID, required quantity, and required-by date',
+      'Query approved supplier list and select best option by lead time and cost',
+      'Raise purchase order in ERP and notify procurement team',
+      'Track order status and alert scheduler if lead time risks production delay'
+    ],
+    sub_agents: [],
+    tools: ['erp_query', 'erp_update', 'supplier_api', 'notification_service']
+  },
+  // ── REMANUFACTURING ────────────────────────────────
+  rstrat: {
+    role: 'Selects the optimal circular economy strategy for each incoming core',
+    goal: 'Maximise material value recovery while minimising cost-to-recovery ratio',
+    instructions: [
+      'Receive condition assessment score, cost estimate, and component availability status',
+      'Evaluate all viable R-strategies (Repair, Reuse, Remanufacture, Recycle) against cost-recovery threshold',
+      'Query ERP/DB/KB for current demand, inventory levels, and carbon impact per strategy',
+      'Select the strategy with the best value score and assign it to the work order',
+      'Flag cores with unknown defect types for human technician review before proceeding'
+    ],
+    sub_agents: [
+      { id: 'strategy_evaluator', role: 'Scores each R-strategy option against cost, time, and CO2 indicators', tools: ['indicators_db_query', 'cost_model'] },
+      { id: 'demand_checker', role: 'Checks remanufactured unit demand and inventory levels', tools: ['erp_query', 'inventory_api'] }
+    ],
+    tools: ['indicators_db_query', 'erp_query', 'inventory_api', 'cost_model', 'knowledge_base_query', 'work_order_writer']
+  },
+  trig_proc: {
+    role: 'Triggers procurement of missing components when inventory check fails',
+    goal: 'Source required parts without delaying the repair execution schedule',
+    instructions: [
+      'Receive stock-out alert with part ID, required quantity, and core work order ID',
+      'Query approved supplier list for the part and select by lead time and cost',
+      'Raise purchase order in ERP and link it to the core work order',
+      'Monitor delivery and update component availability status when stock arrives'
+    ],
+    sub_agents: [],
+    tools: ['erp_query', 'erp_update', 'supplier_api', 'inventory_api', 'notification_service']
+  },
+  alloc: {
+    role: 'Allocates in-stock components to the active repair work order',
+    goal: 'Reserve and stage the correct parts before repair execution begins',
+    instructions: [
+      'Confirm component availability in inventory system',
+      'Reserve required quantities against the work order ID',
+      'Generate pick list and trigger warehouse staging task',
+      'Update inventory records and work order status'
+    ],
+    sub_agents: [],
+    tools: ['inventory_api', 'erp_update', 'warehouse_management_api', 'work_order_writer']
+  },
+  qa_fail: {
+    role: 'Routes failed units back into the quality assessment loop for re-inspection',
+    goal: 'Ensure no failed unit exits without a documented re-assessment attempt',
+    instructions: [
+      'Receive QA fail result with unit ID, failure reason, and score',
+      'Log failure event to traceability record',
+      'Route unit back to quality & compliance assessment with failure context attached',
+      'After second fail, escalate to human technician for manual triage decision'
+    ],
+    sub_agents: [],
+    tools: ['event_logger', 'erp_update', 'notification_service', 'work_order_writer']
+  },
+  // ── SHARED ─────────────────────────────────────────
+  rpt_gen: {
+    role: 'Generates production or remanufacturing performance reports',
+    goal: 'Produce accurate, timely reports that reflect the current operational state',
+    instructions: [
+      'Aggregate KPI data for the completed cycle or shift',
+      'Format report according to defined template (shift summary, batch report, or KPI dashboard)',
+      'Distribute report to configured recipients via notification service',
+      'Archive report to document management system with timestamp and run ID'
+    ],
+    sub_agents: [],
+    tools: ['kpi_dashboard_writer', 'report_generator', 'notification_service', 'document_store']
+  }
+};
+
+// ── TOOL CATALOGUE (referenced in agent definitions) ──
+const TOOL_CATALOGUE = {
+  erp_query:              { type:'data_retrieval',  description:'Queries ERP system for orders, BOMs, inventory, and production records' },
+  erp_update:             { type:'data_write',      description:'Writes updates to ERP (order status, inventory levels, work orders)' },
+  machine_status_api:     { type:'data_retrieval',  description:'Returns real-time availability, calibration, and health status of machines' },
+  iolink_reader:          { type:'sensor_stream',   description:'Subscribes to IO-Link sensor streams and returns normalised readings' },
+  plc_reader:             { type:'sensor_stream',   description:'Reads current parameter values from PLC registers' },
+  plc_write:              { type:'actuation',       description:'Writes parameter values to PLC registers with acknowledgement' },
+  scada_reader:           { type:'sensor_stream',   description:'Reads process variables from SCADA system' },
+  scada_write:            { type:'actuation',       description:'Sends setpoint commands to SCADA-controlled equipment' },
+  camera_feed:            { type:'sensor_stream',   description:'Returns latest frame or frame sequence from production cameras' },
+  vision_model_inference: { type:'ai_model',        description:'Runs defect detection or dimensional measurement on an image input' },
+  ml_classifier:          { type:'ai_model',        description:'Classifies input features into defined anomaly or defect categories' },
+  ml_training_api:        { type:'ai_model',        description:'Submits labelled examples to the model retraining pipeline' },
+  optimisation_solver:    { type:'ai_model',        description:'Runs parameter optimisation over a defined search space' },
+  simulation_runner:      { type:'ai_model',        description:'Executes Monte Carlo or process simulation with given inputs' },
+  probability_model:      { type:'ai_model',        description:'Computes posterior probability scores for candidate root causes' },
+  knowledge_base_query:   { type:'data_retrieval',  description:'Searches the SMA knowledge base for historical patterns, manuals, and resolutions' },
+  vector_similarity_search:{ type:'data_retrieval', description:'Finds nearest-neighbour matches in the failure pattern embedding store' },
+  timeseries_db:          { type:'data_retrieval',  description:'Queries time-series data store for sensor history and trend data' },
+  dataset_writer:         { type:'data_write',      description:'Writes new labelled training examples to the ML dataset store' },
+  threshold_evaluator:    { type:'rule_engine',     description:'Evaluates a value against defined upper/lower thresholds and returns a severity band' },
+  rule_engine:            { type:'rule_engine',     description:'Applies configured business rules to an input and returns a routing decision' },
+  safe_limit_validator:   { type:'rule_engine',     description:'Validates a proposed actuation command against machine safe operating limits' },
+  alert_publisher:        { type:'messaging',       description:'Publishes structured alert events to the SMA event bus' },
+  notification_service:   { type:'messaging',       description:'Sends notifications to operators, technicians, or systems via configured channels' },
+  human_review_trigger:   { type:'messaging',       description:'Pauses the flow and requests human review via the operator UI' },
+  event_logger:           { type:'data_write',      description:'Appends structured events (corrections, decisions, outcomes) to the audit log' },
+  report_generator:       { type:'data_write',      description:'Produces formatted reports (PDF, JSON, HTML) from aggregated data inputs' },
+  kpi_dashboard_writer:   { type:'data_write',      description:'Updates the live KPI dashboard with latest metrics' },
+  qa_report_writer:       { type:'data_write',      description:'Writes unit-level or batch-level QA inspection reports' },
+  serial_number_generator:{ type:'data_write',      description:'Generates and assigns unique serial numbers or batch IDs' },
+  dispatch_trigger:       { type:'actuation',       description:'Triggers downstream logistics, WIP transfer, or dispatch actions' },
+  schedule_writer:        { type:'data_write',      description:'Writes the optimised job sequence back to the scheduling system' },
+  work_order_writer:      { type:'data_write',      description:'Creates or updates work orders in the production management system' },
+  checklist_template_store:{ type:'data_retrieval', description:'Retrieves AR repair checklist templates by fault type' },
+  ar_content_renderer:    { type:'actuation',       description:'Pushes structured AR content to the technician AR device' },
+  workforce_management_api:{ type:'data_retrieval', description:'Returns available technician list with skills and location' },
+  task_tracker:           { type:'data_write',      description:'Creates and tracks technician task assignments to completion' },
+  document_store:         { type:'data_write',      description:'Archives documents and reports with metadata and timestamp' },
+  scoring_model:          { type:'ai_model',        description:'Aggregates sub-inspection scores into a composite quality score' },
+  cmm_reader:             { type:'sensor_stream',   description:'Reads dimensional measurement data from CMM or gauge systems' },
+  feature_extractor:      { type:'ai_model',        description:'Extracts structured feature vectors from raw sensor or image data' },
+  trend_analyser:         { type:'ai_model',        description:'Computes trend direction and rate-of-change from time-series input' },
+  risk_scorer:            { type:'ai_model',        description:'Assigns a risk impact score to a candidate root cause or anomaly' },
+  cost_model:             { type:'ai_model',        description:'Estimates repair cost, labour time, and margin for a given core condition' },
+  indicators_db_query:    { type:'data_retrieval',  description:'Queries the Indicators DB for COST · TIME · CO2 benchmarks per strategy' },
+  inventory_api:          { type:'data_retrieval',  description:'Returns real-time stock levels and reservation status for parts and materials' },
+  warehouse_management_api:{ type:'actuation',      description:'Triggers pick, stage, and transfer tasks in the warehouse management system' },
+  supplier_api:           { type:'data_retrieval',  description:'Queries approved supplier catalogue for lead times, pricing, and availability' },
+  calendar_api:           { type:'data_retrieval',  description:'Returns maintenance windows, shift schedules, and production calendar data' },
+  uncertainty_model:      { type:'ai_model',        description:'Returns uncertainty distributions for process parameters from historical data' },
+};
+
+// ══════════════════════════════════════════════════════
+// BUILD THE SHARED LOGIC OBJECT (used by both outputs)
+// ══════════════════════════════════════════════════════
+let _lastLogic = null;
+
+function buildLogicObject() {
+  const filledTargets = Object.fromEntries(Object.entries(state.targets).filter(([,v])=>v));
+  const sectorDef = SECTIONS[state.industry] || [];
+
+  // decision gates
+  const decisionGates = canvasNodes.filter(n=>n.type==='decision').map(n=>({
+    gate_id: n.id,
+    question: n.label,
+    description: n.desc,
+    yes_route: canvasEdges.find(e=>e.from===n.id&&e.type==='yes')?.to || null,
+    no_route:  canvasEdges.find(e=>e.from===n.id&&e.type==='no')?.to  || null,
+  }));
+
+  // flow steps (ordered by y position)
+  const flowSteps = [...canvasNodes]
+    .filter(n=>n.type!=='db')
+    .sort((a,b)=>a.y-b.y)
+    .map((n,i)=>{
+      const outEdges = canvasEdges.filter(e=>e.from===n.id);
+      return {
+        step: i+1,
+        node_id: n.id,
+        node_type: n.type,
+        label: n.label,
+        description: n.desc,
+        next: outEdges.map(e=>({ to: e.to, condition: e.type==='main'?null:e.type }))
+      };
+    });
+
+  // agents enriched with catalogue data
+  const agentNodes = canvasNodes.filter(n=>n.type==='agent');
+  const enrichedAgents = agentNodes.map(n=>{
+    const cat = AGENT_CATALOGUE[n.id] || AGENT_CATALOGUE[n.id.replace(/-/g,'_')] || null;
+    const inEdges  = canvasEdges.filter(e=>e.to===n.id).map(e=>e.from);
+    const outEdges = canvasEdges.filter(e=>e.from===n.id).map(e=>({to:e.to,condition:e.type==='main'?null:e.type}));
+    return {
+      agent_id: n.id.replace(/-/g,'_'),
+      label: n.label,
+      role: cat?.role || n.desc,
+      goal: cat?.goal || null,
+      instructions: cat?.instructions || n.desc.split('·').map(s=>s.trim()).filter(Boolean),
+      triggers_from: inEdges,
+      outputs_to: outEdges,
+      sub_agents: cat?.sub_agents || [],
+      tools: (cat?.tools || []).map(tid=>({
+        tool_id: tid,
+        ...(TOOL_CATALOGUE[tid]||{type:'external',description:tid})
+      }))
+    };
+  });
+
+  // used tools deduplicated
+  const usedToolIds = [...new Set(enrichedAgents.flatMap(a=>[...a.tools.map(t=>t.tool_id),...(AGENT_CATALOGUE[a.agent_id]?.sub_agents||[]).flatMap(sa=>sa.tools||[])]))] ;
+  const toolsManifest = usedToolIds.map(tid=>({ tool_id:tid, ...(TOOL_CATALOGUE[tid]||{type:'external',description:tid}) }));
+
+  _lastLogic = {
+    sma_logic_block: {
+      meta: {
+        sector: state.industry,
+        flow_type: state.industry==='manufacturing'
+          ? 'Closed-loop production optimisation (Sub-flow A: Parameter Optimisation + Sub-flow B: Root Cause Analysis)'
+          : 'Circular economy core recovery (Intake → Assessment → R-Strategy → Execution → QA → Knowledge)',
+        generated_at: new Date().toISOString(),
+        version: '1.0',
+        description: state.industry==='manufacturing'
+          ? 'Self-reinforcing dual-loop system: Sub-flow A optimises parameters before and during production; Sub-flow B diagnoses and resolves anomalies. Every anomaly resolved by B improves A; every cycle completed by A sharpens B.'
+          : 'End-to-end remanufacturing intelligence: cores are registered, disassembled, assessed against COST/TIME/CO2 indicators, routed to the optimal R-strategy, repaired, quality-certified, and fed back into the knowledge base.'
+      },
+      targets: Object.keys(filledTargets).length ? filledTargets : {},
+      active_sections: Object.entries(state.sections).filter(([,v])=>v).map(([k])=>k),
+      active_subpaths: Object.fromEntries(
+        Object.entries(state.subpaths).map(([sec,paths])=>[sec, Object.entries(paths).filter(([,v])=>v).map(([k])=>k)])
+      ),
+      end_routing: Object.entries(state.scrap).filter(([,v])=>v).map(([k])=>k),
+      flow_steps: flowSteps,
+      decision_gates: decisionGates,
+      agents: enrichedAgents,
+      tools_manifest: toolsManifest,
+      edges: canvasEdges.map(e=>({from:e.from, to:e.to, relation:e.type}))
+    }
+  };
+  return _lastLogic;
+}
+
+// ══════════════════════════════════════════════════════
+// YAML SERIALISER
+// ══════════════════════════════════════════════════════
+function toYAML(obj, indent=0) {
+  const pad = s => ' '.repeat(s);
+  const safe = v => {
+    if(v===null||v===undefined) return 'null';
+    if(typeof v==='boolean') return String(v);
+    if(typeof v==='number') return String(v);
+    const s=String(v);
+    if(s===''||/[:{}\[\],&*?|<>=!%@`#]|^[-~]|^\s|\s$|^(true|false|yes|no|null|~)$/i.test(s)||s.includes('\n')) return `"${s.replace(/\\/g,'\\\\').replace(/"/g,'\\"')}"`;
+    return s;
+  };
+  if(Array.isArray(obj)){
+    if(obj.length===0) return '[]\n';
+    return obj.map(item=>{
+      if(typeof item==='object'&&item!==null){
+        const lines=toYAML(item,indent+2);
+        return pad(indent)+'- '+lines.trimStart();
+      }
+      return pad(indent)+'- '+safe(item)+'\n';
+    }).join('');
+  }
+  if(typeof obj==='object'&&obj!==null){
+    return Object.entries(obj).map(([k,v])=>{
+      if(typeof v==='object'&&v!==null&&!Array.isArray(v)&&Object.keys(v).length>0)
+        return pad(indent)+k+':\n'+toYAML(v,indent+2);
+      if(Array.isArray(v)){
+        if(v.length===0) return pad(indent)+k+': []\n';
+        return pad(indent)+k+':\n'+toYAML(v,indent+2);
+      }
+      return pad(indent)+k+': '+safe(v)+'\n';
+    }).join('');
+  }
+  return pad(indent)+safe(obj)+'\n';
+}
+
+function syntaxHLYAML(yaml) {
+  return yaml.split('\n').map(line=>{
+    if(!line.trim()) return line;
+    // comment
+    if(line.trimStart().startsWith('#')) return `<span class="yc">${line}</span>`;
+    // key: value
+    const m=line.match(/^(\s*)([-]?\s*)?([a-zA-Z_][a-zA-Z0-9_]*)\s*:\s*(.*)/);
+    if(m){
+      const [,ws,dash,key,val]=m;
+      const dStr=dash||'';
+      let vStr='';
+      if(val.startsWith('"')||val.startsWith("'")) vStr=`<span class="yv">${val}</span>`;
+      else if(/^(true|false|yes|no|null|~)$/i.test(val.trim())) vStr=`<span class="ys">${val}</span>`;
+      else if(/^\d/.test(val.trim())) vStr=`<span class="ys">${val}</span>`;
+      else vStr=`<span class="yv">${val}</span>`;
+      return `${ws}${dStr}<span class="yk">${key}</span>: ${vStr}`;
+    }
+    // list item without key
+    const li=line.match(/^(\s*- )(.+)/);
+    if(li) return `${li[1]}<span class="yv">${li[2]}</span>`;
+    return line;
+  }).join('\n');
+}
+
+// ══════════════════════════════════════════════════════
+// GENERATE BOTH OUTPUTS
+// ══════════════════════════════════════════════════════
+let _activeTab = 'json';
+
+function generateOutputs() {
+  const logic = buildLogicObject();
+  // JSON
+  document.getElementById('jsonOut').innerHTML = syntaxHLJSON(JSON.stringify(logic, null, 2));
+  // YAML
+  const yamlStr = '# SMA Logic Block — Agent-Ready YAML\n# Generated: '+new Date().toISOString()+'\n# Use this file to instruct LLM agents about flow steps, decision gates,\n# agent roles/goals/instructions, sub-agents, and available tools.\n\n' + toYAML(logic);
+  document.getElementById('yamlOut').innerHTML = syntaxHLYAML(yamlStr);
+}
+
+// alias so existing call works
+function generateJSON() { generateOutputs(); }
+
+function syntaxHLJSON(j){
+  return j.replace(/(\"(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*\"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,m=>{
+    let c='jn';
+    if(/^"/.test(m)){if(/:$/.test(m))c='jk';else c='jv';}
+    else if(/true|false/.test(m))c='jb';
+    else if(/null/.test(m))c='js';
+    return`<span class="${c}">${m}</span>`;
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// TAB SWITCHING
+// ══════════════════════════════════════════════════════
+function switchTab(tab) {
+  _activeTab = tab;
+  document.getElementById('jsonOut').style.display = tab==='json'?'block':'none';
+  document.getElementById('yamlOut').style.display = tab==='yaml'?'block':'none';
+  document.getElementById('tab-json').classList.toggle('active', tab==='json');
+  document.getElementById('tab-yaml').classList.toggle('active', tab==='yaml');
+}
+
+function copyActive() {
+  const el = document.getElementById(_activeTab==='json'?'jsonOut':'yamlOut');
+  navigator.clipboard.writeText(el.textContent)
+    .then(()=>{ const b=event.target; b.textContent='Copied!'; setTimeout(()=>b.textContent='Copy',1500); });
+}
+
+function downloadActive() {
+  if(!_lastLogic) return;
+  if(_activeTab==='json') {
+    const blob=new Blob([JSON.stringify(_lastLogic,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=`sma_logic_${state.industry||'block'}.json`;a.click();
+  } else {
+    const raw=document.getElementById('yamlOut').textContent;
+    const blob=new Blob([raw],{type:'text/yaml'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download=`sma_logic_${state.industry||'block'}.yaml`;a.click();
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// GRID & RESET
+// ══════════════════════════════════════════════════════
+function drawGrid(){
+  const canvas=document.getElementById('grid-bg');
+  const wrap=document.getElementById('canvasWrap');
+  canvas.width=wrap.offsetWidth; canvas.height=wrap.offsetHeight;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle='#1e2028';
+  const gap=26;
+  for(let x=0;x<canvas.width;x+=gap)
+    for(let y=0;y<canvas.height;y+=gap){
+      ctx.beginPath();ctx.arc(x,y,0.9,0,Math.PI*2);ctx.fill();
+    }
+}
+
+function resetWizard(){
+  state={industry:null,sections:{},subpaths:{},targets:{},scrap:{}};
+  canvasNodes=[];canvasEdges=[];vpScale=1;vpX=0;vpY=0;
+  document.getElementById('canvas-viewport').style.transform='';
+  document.getElementById('svg-layer').style.transform='';
+  document.getElementById('nodes-layer').innerHTML='';
+  document.getElementById('svg-layer').querySelectorAll('.edge,.edge-lbl').forEach(e=>e.remove());
+  document.getElementById('emptyState').style.display='block';
+  document.getElementById('jsonOut').textContent='// Build the flow to generate output';
+  document.getElementById('yamlOut').textContent='# Build the flow to generate output';
+  _lastLogic=null;
+  document.getElementById('buildBtn').disabled=true;
+  for(let i=1;i<=5;i++){
+    const num=document.getElementById('num-'+i);
+    num.classList.remove('done','active');num.textContent=i;
+    const pill=document.getElementById('pill-'+i);
+    pill.classList.remove('done','active');
+    if(i===1)pill.classList.add('active');
+    const sec=document.getElementById('sec-'+i);
+    sec.classList.remove('expanded');sec.classList.add('collapsed');
+    if(i===1){sec.classList.remove('collapsed');sec.classList.add('expanded');}
+  }
+  document.getElementById('num-1').classList.add('active');
+  document.querySelectorAll('.industry-card').forEach(c=>c.classList.remove('selected'));
+}
+
+// INIT
+drawGrid();
+window.addEventListener('resize',drawGrid);
+</script>
+</body>
+</html>

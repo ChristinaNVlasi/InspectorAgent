@@ -1,0 +1,35 @@
+WARNING:root:build123d not installed - 3D visualization disabled
+INFO:     Started server process [25607]
+INFO:     Waiting for application startup.
+OMP: Info #276: omp_set_nested routine deprecated, please use omp_set_max_active_levels instead.
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights: 100%|██████████| 398/398 [00:00<00:00, 83458.30it/s]
+[1mCLIPModel LOAD REPORT[0m from: openai/clip-vit-base-patch32
+Key                                  | Status     |  | 
+-------------------------------------+------------+--+-
+vision_model.embeddings.position_ids | UNEXPECTED |  | 
+text_model.embeddings.position_ids   | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+sh: nvidia-smi: command not found
+Loading weights:   0%|          | 0/398 [00:00<?, ?it/s]Loading weights: 100%|██████████| 398/398 [00:00<00:00, 75351.31it/s]
+[1mCLIPModel LOAD REPORT[0m from: openai/clip-vit-base-patch32
+Key                                  | Status     |  | 
+-------------------------------------+------------+--+-
+vision_model.embeddings.position_ids | UNEXPECTED |  | 
+text_model.embeddings.position_ids   | UNEXPECTED |  | 
+
+Notes:
+- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
+WARNING:ai_vision.models.rag_inspector:  ⚠️ No good casting references in loaded database
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:3030 (Press CTRL+C to quit)
+INFO:     127.0.0.1:57269 - "GET /tools/schemas HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [25607]
+/Users/christinavlasi/miniconda3/lib/python3.13/multiprocessing/resource_tracker.py:277: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/loky-25607-pzjexm80'}
+  warnings.warn(

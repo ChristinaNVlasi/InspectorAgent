@@ -1,0 +1,32 @@
+/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/features/_feature_decorator.py:72: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+2026-05-13 15:07:57,560 - __main__ - INFO - ============================================================
+2026-05-13 15:07:57,560 - __main__ - INFO - BORG Alternator Inspection Agent  (v1.0)
+2026-05-13 15:07:57,560 - __main__ - INFO -   Port       : 2827
+2026-05-13 15:07:57,560 - __main__ - INFO -   MCP Server : http://localhost:3030
+2026-05-13 15:07:57,560 - __main__ - INFO - ============================================================
+2026-05-13 15:07:57,560 - __main__ - INFO - 🔧 Initialising BORG Alternator Inspection Agent
+2026-05-13 15:07:57,560 - __main__ - INFO - 📡 MCP Server : http://localhost:3030
+2026-05-13 15:07:57,560 - __main__ - INFO - 🧠 LLM        : openai/qwen3:30b-a3b-q8_0
+/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/apps/agent_borg/adk_agent.py:110: DeprecationWarning: MCPToolset class is deprecated, use `McpToolset` instead.
+  mcp_toolset = MCPToolset(connection_params=SseConnectionParams(url=sse_url, headers=_MCP_AUTH_HEADERS))
+2026-05-13 15:07:57,560 - __main__ - INFO - ✅ Connected to MCP server at http://localhost:3030/sse
+2026-05-13 15:07:57,560 - __main__ - INFO - ✅ BORG Agent initialised
+INFO:     Started server process [77332]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:2827 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55928 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55928 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55928 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55928 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55967 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55991 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56028 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56046 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56096 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56116 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56144 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56222 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56591 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57038 - "GET /health HTTP/1.1" 200 OK

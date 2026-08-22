@@ -1,0 +1,172 @@
+/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/features/_feature_decorator.py:72: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+  check_feature_enabled()
+2026-05-13 15:07:55,059 - __main__ - INFO - ======================================================================
+2026-05-13 15:07:55,060 - __main__ - INFO - 🚀 Knorr PCB Inspection Agent
+2026-05-13 15:07:55,060 - __main__ - INFO - ======================================================================
+2026-05-13 15:07:55,060 - __main__ - INFO - Agent Port: 2829
+2026-05-13 15:07:55,060 - __main__ - INFO - Agent Host: 0.0.0.0
+2026-05-13 15:07:55,060 - __main__ - INFO - MCP Server: http://localhost:3030
+2026-05-13 15:07:55,060 - __main__ - INFO - ======================================================================
+2026-05-13 15:07:55,060 - __main__ - INFO - 🤖 Initializing Knorr PCB Inspection Agent
+2026-05-13 15:07:55,060 - __main__ - INFO - 📡 MCP Server: http://localhost:3030
+2026-05-13 15:07:55,060 - __main__ - INFO - 🧠 LLM: openai/qwen3:30b-a3b-q8_0
+/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/apps/agent_knorr/adk_agent.py:101: DeprecationWarning: MCPToolset class is deprecated, use `McpToolset` instead.
+  mcp_toolset = MCPToolset(connection_params=connection_params)
+2026-05-13 15:07:55,060 - __main__ - INFO - ✅ Connected to MCP server at http://localhost:3030/sse
+2026-05-13 15:07:55,060 - __main__ - INFO - ✅ ADK agent created with MCP tools
+2026-05-13 15:07:55,060 - __main__ - INFO - ✅ Agent initialized successfully
+2026-05-13 15:07:55,060 - __main__ - INFO - 🌐 Starting API server on 0.0.0.0:2829
+2026-05-13 15:07:55,060 - __main__ - INFO - 💡 Use --interactive flag for CLI mode
+INFO:     Started server process [77258]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:2829 (Press CTRL+C to quit)
+INFO:     127.0.0.1:55913 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55913 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55913 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55913 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55913 - "GET /health HTTP/1.1" 200 OK
+2026-05-13 15:08:32,365 - __main__ - INFO - ✅ File uploaded: /var/folders/hl/6k9jglks7_310237yx15m5_m0000gn/T/sma_inspector/pcb_20260513_150832.jpg
+INFO:     127.0.0.1:55956 - "POST /upload HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55956 - "OPTIONS /chat HTTP/1.1" 200 OK
+2026-05-13 15:08:33,998 - httpx - INFO - HTTP Request: POST http://127.0.0.1:3030/tools/pcb_inspect "HTTP/1.1 200 OK"
+INFO:     127.0.0.1:55956 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55956 - "GET /health HTTP/1.1" 200 OK
+2026-05-13 15:08:44,725 - __main__ - INFO - 📝 Processing request: how to repair it? provide...
+2026-05-13 15:08:44,757 - httpx - INFO - HTTP Request: GET http://localhost:3030/sse "HTTP/1.1 200 OK"
+2026-05-13 15:08:44,762 - httpx - INFO - HTTP Request: POST http://localhost:3030/messages/?session_id=6d8a52c6566a4dada420e2556831317e "HTTP/1.1 202 Accepted"
+2026-05-13 15:08:44,764 - httpx - INFO - HTTP Request: POST http://localhost:3030/messages/?session_id=6d8a52c6566a4dada420e2556831317e "HTTP/1.1 202 Accepted"
+2026-05-13 15:08:44,766 - httpx - INFO - HTTP Request: POST http://localhost:3030/messages/?session_id=6d8a52c6566a4dada420e2556831317e "HTTP/1.1 202 Accepted"
+/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/features/_feature_decorator.py:72: UserWarning: [EXPERIMENTAL] feature FeatureName.BASE_AUTHENTICATED_TOOL is enabled.
+  check_feature_enabled()
+2026-05-13 15:08:44,768 - google_genai.types - INFO - 
+Note: Conversion of fields that are not included in the JSONSchema class are ignored.
+Json Schema is now supported natively by both Gemini Enterprise Agent Platform and Gemini API. Users
+are recommended to pass/receive Json Schema directly to/from the API. For example:
+1. the counter part of GenerateContentConfig.response_schema is
+   GenerateContentConfig.response_json_schema, which accepts [JSON
+  Schema](https://json-schema.org/)
+2. the counter part of FunctionDeclaration.parameters is
+   FunctionDeclaration.parameters_json_schema, which accepts [JSON
+   Schema](https://json-schema.org/)
+3. the counter part of FunctionDeclaration.response is
+   FunctionDeclaration.response_json_schema, which accepts [JSON
+   Schema](https://json-schema.org/)
+
+[92m15:08:45 - LiteLLM:INFO[0m: utils.py:4011 - 
+LiteLLM completion() model= qwen3:30b-a3b-q8_0; provider = openai
+2026-05-13 15:08:45,897 - LiteLLM - INFO - 
+LiteLLM completion() model= qwen3:30b-a3b-q8_0; provider = openai
+2026-05-13 15:08:47,533 - __main__ - INFO - 🔧 LLM called tool: pcb_generate_repair_guide
+[92m15:08:47 - LiteLLM:INFO[0m: utils.py:4011 - 
+LiteLLM completion() model= qwen3:30b-a3b-q8_0; provider = openai
+2026-05-13 15:08:47,704 - LiteLLM - INFO - 
+LiteLLM completion() model= qwen3:30b-a3b-q8_0; provider = openai
+INFO:     127.0.0.1:55987 - "GET /health HTTP/1.1" 200 OK
+2026-05-13 15:09:20,365 - __main__ - INFO - ✅ Request processed successfully (history: 4 messages)
+2026-05-13 15:09:20,365 - __main__ - INFO - ✅ Tool calls captured: ['pcb_generate_repair_guide']
+2026-05-13 15:09:20,383 - opentelemetry.context - ERROR - Failed to detach context
+Traceback (most recent call last):
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 619, in use_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 519, in start_as_current_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 454, in start_as_current_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/telemetry/tracing.py", line 749, in _use_native_generate_content_span_stable_semconv
+    yield gc_span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/telemetry/tracing.py", line 761, in _use_native_generate_content_span
+    yield gc_span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/telemetry/tracing.py", line 613, in use_inference_span
+    yield gc_span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/flows/llm_flows/base_llm_flow.py", line 389, in _run_and_handle_error
+    yield llm_response
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/context/__init__.py", line 155, in detach
+    _RUNTIME_CONTEXT.detach(token)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/context/contextvars_context.py", line 53, in detach
+    self._current_context.reset(token)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+ValueError: <Token var=<ContextVar name='current_context' default={} at 0x110a7eac0> at 0x127f2d940> was created in a different Context
+2026-05-13 15:09:20,384 - opentelemetry.context - ERROR - Failed to detach context
+Traceback (most recent call last):
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 619, in use_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 519, in start_as_current_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 454, in start_as_current_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/flows/llm_flows/base_llm_flow.py", line 1264, in _call_llm_with_tracing
+    yield llm_response
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/context/__init__.py", line 155, in detach
+    _RUNTIME_CONTEXT.detach(token)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/context/contextvars_context.py", line 53, in detach
+    self._current_context.reset(token)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+ValueError: <Token var=<ContextVar name='current_context' default={} at 0x110a7eac0> at 0x127f2eb40> was created in a different Context
+2026-05-13 15:09:20,385 - opentelemetry.context - ERROR - Failed to detach context
+Traceback (most recent call last):
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 619, in use_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 519, in start_as_current_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 454, in start_as_current_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/telemetry/_instrumentation.py", line 87, in record_agent_invocation
+    yield tel_ctx
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/agents/base_agent.py", line 296, in run_async
+    yield event
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/context/__init__.py", line 155, in detach
+    _RUNTIME_CONTEXT.detach(token)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/context/contextvars_context.py", line 53, in detach
+    self._current_context.reset(token)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+ValueError: <Token var=<ContextVar name='current_context' default={} at 0x110a7eac0> at 0x1144842c0> was created in a different Context
+2026-05-13 15:09:20,386 - opentelemetry.context - ERROR - Failed to detach context
+Traceback (most recent call last):
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 619, in use_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 519, in start_as_current_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/trace/__init__.py", line 454, in start_as_current_span
+    yield span
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/google/adk/runners.py", line 617, in _run_with_trace
+    yield event
+GeneratorExit
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/context/__init__.py", line 155, in detach
+    _RUNTIME_CONTEXT.detach(token)
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "/Users/christinavlasi/Documents/GitHub/sma-inspector-agent/.venv/lib/python3.13/site-packages/opentelemetry/context/contextvars_context.py", line 53, in detach
+    self._current_context.reset(token)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^
+ValueError: <Token var=<ContextVar name='current_context' default={} at 0x110a7eac0> at 0x111593b80> was created in a different Context
+INFO:     127.0.0.1:55958 - "POST /chat HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56024 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56042 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56092 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56112 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56140 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56218 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56587 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57036 - "GET /health HTTP/1.1" 200 OK

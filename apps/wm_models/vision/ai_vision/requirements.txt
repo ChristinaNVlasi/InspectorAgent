@@ -1,0 +1,48 @@
+# AI Vision System Requirements
+# Compatible with existing conda environment
+
+# Core packages (already installed, just ensure compatibility)
+# torch==2.7.0  # Already installed
+# torchvision==0.22.0  # Already installed
+# transformers==4.52.2  # Already installed
+# opencv-python==4.11.0.86  # Already installed
+# Pillow==11.2.1  # Already installed
+# numpy==2.3.1  # Already installed
+# scikit-learn==1.6.1  # Already installed
+# scipy==1.15.3  # Already installed
+
+# Vector Database and RAG (already installed)
+# chromadb==1.2.2  # Already installed
+# sentence-transformers==4.1.0  # Already installed
+# faiss-cpu==1.11.0  # Already installed
+
+# Web Framework and API (already installed)
+# fastapi==0.115.14  # Already installed
+# uvicorn==0.34.2  # Already installed
+# streamlit==1.45.1  # Already installed
+# pydantic==2.11.4  # Already installed
+
+# Data Processing (already installed)
+# pandas==2.2.3  # Already installed
+# matplotlib==3.10.3  # Already installed
+# seaborn==0.13.2  # Already installed
+# plotly==6.1.1  # Already installed
+
+# LLM Integration (already installed)
+# openai==1.109.1  # Already installed
+# langchain==0.3.25  # Already installed
+
+# Utilities (already installed)
+# python-dotenv==1.1.0  # Already installed
+# tqdm==4.67.1  # Already installed
+# loguru==0.7.3  # Already installed
+# pyyaml==6.0.2  # Already installed
+# requests==2.32.4  # Already installed
+
+# Only install missing packages if any
+# clip-by-openai  # NOT NEEDED - use transformers CLIP instead
+
+# Image Segmentation (NEW - for CLIPSeg module)
+# CLIPSeg for zero-shot image segmentation
+# transformers already installed, just ensure version supports CLIPSeg
+# Note: CLIPSeg requires transformers >= 4.20.0

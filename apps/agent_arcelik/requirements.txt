@@ -1,0 +1,35 @@
+# Arcelik-Beko Inspection Agent Requirements
+
+# Core ADK and AI dependencies
+google-genai>=0.2.0
+google-adk>=0.1.0
+
+# MCP (Model Context Protocol)
+mcp>=0.9.0
+fastmcp>=0.1.0
+
+# Web frameworks
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+starlette>=0.27.0
+
+# Environment and configuration
+python-dotenv>=1.0.0
+pydantic>=2.5.0
+
+# Utilities
+requests>=2.31.0
+Pillow>=10.0.0
+
+# Logging and monitoring
+python-json-logger>=2.0.7
+
+# Dependencies from RGS_v1 (reference only - already installed)
+# numpy
+# scikit-learn
+# librosa
+# torch
+# torchvision
+# transformers
+# flask
+# flask-cors

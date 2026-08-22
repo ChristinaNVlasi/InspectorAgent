@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inspector Gadget</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+/* ════════════════════════════════════════ RESET & BASE */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #06060f;
+  --surface:     #0d0d1e;
+  --surface2:    #111128;
+  --border:      #1e1e40;
+  --text:        #e8e8f0;
+  --text-dim:    #7070a0;
+  --accent:      #d4af37;
+  --accent2:     #ffd700;
+  --glow:        rgba(212,175,55,.28);
+  --glow-strong: rgba(212,175,55,.55);
+  --particle-r:  212; --particle-g: 175; --particle-b: 55;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ════════════════════════════════════════ FIXED LAYERS */
+#bg-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+#scanlines {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: repeating-linear-gradient(0deg,
+    rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px,
+    rgba(0,0,0,.04) 2px, rgba(0,0,0,.04) 4px);
+  animation: scanRoll 12s linear infinite;
+}
+@keyframes scanRoll { to { background-position: 0 200px; } }
+
+#portal-flash {
+  position: fixed; inset: 0; z-index: 200; pointer-events: none; opacity: 0;
+}
+#portal-flash.burst { animation: portalBurst .9s cubic-bezier(.4,0,.2,1) forwards; }
+@keyframes portalBurst {
+  0%  { opacity: 0; background: radial-gradient(ellipse at 50% 50%, var(--glow-strong) 0%, transparent 65%); }
+  15% { opacity: 1; }
+  40% { opacity: .8; background: radial-gradient(ellipse at 50% 50%, rgba(255,255,255,.12) 0%, var(--glow-strong) 35%, transparent 70%); }
+  100%{ opacity: 0; }
+}
+
+/* ════════════════════════════════════════ PANELS */
+.panel {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column; align-items: center;
+  overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transition: opacity .55s cubic-bezier(.4,0,.2,1);
+}
+.panel.active  { opacity: 1; pointer-events: all; }
+.panel.exit    { opacity: 0; pointer-events: none; }
+
+.panel-inner {
+  display: flex; flex-direction: column;
+  height: 100dvh; width: 100%; max-width: 920px;
+  padding: 0 22px;
+}
+
+/* ════════════════════════════════════════ HEADER */
+.p-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 0 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.logo-group { display: flex; align-items: center; gap: 14px; }
+.logo-icon {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: radial-gradient(circle, var(--glow) 0%, transparent 70%);
+  border: 1.5px solid var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.35rem;
+  color: var(--accent);
+  box-shadow: 0 0 20px var(--glow);
+  animation: pulseLogo 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+@keyframes pulseLogo {
+  0%,100%{ box-shadow: 0 0 18px var(--glow); }
+  50%    { box-shadow: 0 0 38px var(--glow-strong), 0 0 70px var(--glow); }
+}
+.logo-title {
+  font-size: 1.12rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo-sub { color: var(--text-dim); font-size: .7rem; letter-spacing: .15em; margin-top: 1px; }
+
+.back-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 16px; border-radius: 8px; border: 1px solid var(--accent);
+  background: rgba(0,0,0,.45); color: var(--accent);
+  font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 0 12px var(--glow);
+}
+.back-btn:hover { background: var(--glow); box-shadow: 0 0 22px var(--glow-strong); transform: translateX(-2px); }
+
+.status-bar { display: flex; align-items: center; gap: 8px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #2ecc71;
+  box-shadow: 0 0 8px #2ecc71; animation: blink 2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.status-text { font-size: .7rem; color: var(--text-dim); letter-spacing: .1em; }
+
+.spec-badge {
+  padding: 4px 14px; border-radius: 20px; border: 1px solid var(--accent);
+  color: var(--accent); font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  background: rgba(0,0,0,.5);
+  animation: badgeGlow 2.2s infinite;
+}
+@keyframes badgeGlow { 0%,100%{ box-shadow:0 0 8px var(--glow)} 50%{ box-shadow:0 0 22px var(--glow-strong)} }
+
+/* ════════════════════════════════════════ CHAT */
+.chat-area {
+  flex: 1; overflow-y: auto; padding: 14px 0;
+  scroll-behavior: smooth;
+  scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+}
+.chat-area::-webkit-scrollbar { width: 4px; }
+.chat-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.msg-row { display: flex; margin: 7px 0; animation: msgIn .35s cubic-bezier(.4,0,.2,1); }
+@keyframes msgIn { from{ opacity:0; transform: translateY(14px) scale(.97);} to{opacity:1;transform:none;} }
+.msg-row.user  { justify-content: flex-end; }
+.msg-row.agent { justify-content: flex-start; }
+
+.msg-bubble {
+  max-width: 76%; padding: 11px 16px; border-radius: 16px;
+  line-height: 1.58; font-size: .92rem; backdrop-filter: blur(10px);
+}
+.msg-row.user .msg-bubble {
+  background: rgba(var(--particle-r),var(--particle-g),var(--particle-b),.11);
+  border: 1px solid rgba(var(--particle-r),var(--particle-g),var(--particle-b),.35);
+  border-bottom-right-radius: 4px; color: var(--text);
+}
+.msg-row.agent .msg-bubble {
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px; color: var(--text);
+}
+.msg-row.agent .msg-bubble.accent-bubble {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--glow);
+  background: rgba(0,0,0,.32);
+}
+
+/* Enhanced formatting for structured responses */
+.msg-bubble.formatted {
+  line-height: 1.7;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+.msg-bubble.formatted strong {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Thinking box styles */
+.thinking-box {
+  max-width: 70%;
+  margin-bottom: 6px;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.25);
+  border-left: 3px solid rgba(var(--particle-r), var(--particle-g), var(--particle-b), 0.4);
+  border-radius: 8px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-style: italic;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.thinking-box:hover {
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+
+.thinking-box.collapsed {
+  max-height: 28px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.thinking-box.collapsed .think-content {
+  display: none;
+}
+
+.thinking-box.collapsed::before {
+  content: '💭 Thinking process (click to expand)';
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-style: italic;
+}
+
+.thinking-box:not(.collapsed)::before {
+  content: '💭 Agent Thinking:';
+  display: block;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 6px;
+  font-style: normal;
+}
+
+.think-content {
+  line-height: 1.5;
+}
+
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  align-self: flex-end; display: flex; align-items: center; justify-content: center;
+  font-size: .85rem; background: var(--surface2); border: 1px solid var(--border);
+}
+.msg-row.agent .avatar {
+  margin-right: 10px;
+  background: radial-gradient(circle, var(--glow), transparent);
+  border-color: var(--accent); box-shadow: 0 0 10px var(--glow);
+  color: var(--accent);
+}
+.msg-row.user .avatar { margin-left: 10px; }
+
+.typing-dots { display: flex; gap: 5px; align-items: center; }
+.td { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .6;
+  animation: tdBounce 1.2s infinite ease-in-out; }
+.td:nth-child(2){ animation-delay: .2s; }
+.td:nth-child(3){ animation-delay: .4s; }
+@keyframes tdBounce { 0%,80%,100%{transform:scale(1);opacity:.5} 40%{transform:scale(1.5);opacity:1} }
+
+/* ════════════════════════════════════════ UPLOAD STRIP */
+.upload-strip { display: flex; align-items: center; gap: 8px; padding: 8px 0 0; flex-shrink: 0; }
+.upload-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px;
+  border: 1px dashed var(--accent); background: rgba(0,0,0,.35);
+  color: var(--accent); font-size: .78rem; letter-spacing: .06em;
+  cursor: pointer; transition: all .2s;
+}
+.upload-btn:hover { background: var(--glow); border-style: solid; }
+.file-chip {
+  display: none; padding: 4px 12px; border-radius: 20px;
+  background: rgba(var(--particle-r),var(--particle-g),var(--particle-b),.15);
+  border: 1px solid var(--accent); color: var(--accent);
+  font-size: .75rem; max-width: 220px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+  align-items: center; gap: 6px;
+}
+.file-chip.has-file { display: flex; }
+.clear-file { background: none; border: none; color: var(--text-dim);
+  cursor: pointer; font-size: .9rem; padding: 0 4px; flex-shrink: 0; }
+.clear-file:hover { color: var(--accent); }
+
+/* ════════════════════════════════════════ INPUT AREA */
+.input-area { padding: 12px 0 18px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.input-row { display: flex; gap: 10px; align-items: flex-end; }
+.msg-input {
+  flex: 1; background: var(--surface2);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  color: var(--text); font-size: .91rem; padding: 12px 16px;
+  resize: none; max-height: 120px; min-height: 48px;
+  line-height: 1.5; outline: none; font-family: inherit;
+  transition: border-color .3s, box-shadow .3s;
+}
+.msg-input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--glow); }
+.msg-input::placeholder { color: var(--text-dim); }
+.send-btn {
+  width: 48px; height: 48px; border-radius: 12px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: #000; font-size: 1.1rem; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 18px var(--glow); transition: all .2s;
+}
+.send-btn:hover  { transform: scale(1.08); box-shadow: 0 0 32px var(--glow-strong); }
+.send-btn:active { transform: scale(.94); }
+.send-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+.input-hint { text-align: center; color: var(--text-dim); font-size: .69rem; letter-spacing: .1em; margin-top: 7px; }
+
+/* ════════════════════════════════════════ TABLET COMPACT */
+@media (max-height: 900px), (max-width: 1024px) {
+  .p-header { padding: 8px 0 6px; }
+  .logo-icon { width: 34px; height: 34px; font-size: 1rem; }
+  .logo-title { font-size: .92rem; }
+  .logo-sub { font-size: .62rem; }
+  .back-btn { padding: 5px 11px; font-size: .72rem; }
+  .spec-badge { padding: 3px 10px; font-size: .62rem; }
+  .panel-inner { padding: 0 14px; }
+  .msg-bubble { font-size: .86rem; padding: 8px 13px; }
+  .upload-strip { padding: 4px 0 0; }
+  .upload-btn { padding: 5px 10px; font-size: .74rem; }
+  .input-area { padding: 8px 0 10px; }
+  .msg-input { min-height: 40px; font-size: .86rem; padding: 9px 13px; }
+  .send-btn { width: 42px; height: 42px; font-size: 1rem; }
+  .input-hint { margin-top: 4px; }
+}
+
+/* ════════════════════════════════════════ FLOW TRACE */
+.flow-trace {
+  width: 100%; margin: 4px 0 8px;
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(var(--particle-r),var(--particle-g),var(--particle-b),.2);
+  border-radius: 10px; padding: 9px 14px;
+  font-size: .76rem; cursor: pointer;
+  transition: border-color .2s;
+}
+.flow-trace:hover { border-color: var(--accent); }
+.flow-trace-hdr { display:flex; align-items:center; gap:8px; color:var(--accent); font-weight:600; }
+.flow-trace-hdr span { color:var(--text-dim); font-weight:400; font-size:.72rem; margin-left:auto; }
+.flow-steps { display:none; margin-top:8px; }
+.flow-trace.open .flow-steps { display:block; }
+.flow-step { display:flex; gap:8px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,.05); align-items:flex-start; }
+.flow-step:last-child { border:none; }
+.flow-step-n { color:var(--accent); opacity:.5; min-width:16px; font-size:.7rem; padding-top:1px; }
+.flow-step-t { color:var(--text-dim); min-width:105px; font-size:.71rem; flex-shrink:0; }
+.flow-step-c { color:var(--text); font-size:.75rem; word-break:break-all; }
+.flow-step.tool-call .flow-step-t { color:var(--accent); }
+.flow-step.tool-result .flow-step-t { color:#22c55e; }
+
+/* ════════════════════════════════════════ PCB RESULT CARD */
+.result-card {
+  margin: 10px 0;
+  background: rgba(0,10,20,.7);
+  border: 1px solid var(--accent); border-radius: 14px; padding: 18px 20px;
+  box-shadow: 0 0 30px var(--glow), inset 0 0 40px rgba(0,0,0,.5);
+  animation: cardIn .5s cubic-bezier(.4,0,.2,1);
+}
+@keyframes cardIn { from{opacity:0;transform:translateY(16px) scale(.96)} to{opacity:1;transform:none} }
+.result-status {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.status-ok   { color: #2ecc71; text-shadow: 0 0 12px rgba(46,204,113,.6); }
+.status-fail { color: #e74c3c; text-shadow: 0 0 12px rgba(231,76,60,.6); }
+.result-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+.meta-pill {
+  padding: 4px 12px; border-radius: 20px; font-size: .75rem;
+  background: rgba(var(--particle-r),var(--particle-g),var(--particle-b),.12);
+  border: 1px solid var(--accent); color: var(--accent); letter-spacing: .06em;
+}
+.result-images { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.result-img {
+  width: 120px; height: 90px; object-fit: cover; border-radius: 8px;
+  border: 1px solid var(--accent); cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
+}
+.result-img:hover { transform: scale(1.07); box-shadow: 0 0 18px var(--glow-strong); }
+.result-img-label { font-size: .68rem; color: var(--text-dim); text-align: center; margin-top: 3px; }
+
+.conf-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.conf-label { font-size: .75rem; color: var(--text-dim); width: 80px; flex-shrink: 0; }
+.conf-track { flex: 1; height: 8px; background: rgba(255,255,255,.07); border-radius: 4px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.conf-pct { font-size: .75rem; color: var(--accent); font-weight: 700; width: 42px; text-align: right; }
+
+/* ════════════════════════════════════════ WM DIAGNOSIS CARD */
+.diag-card {
+  margin: 10px 0;
+  background: rgba(0,12,8,.7);
+  border: 1px solid var(--accent); border-radius: 14px; padding: 18px 20px;
+  box-shadow: 0 0 30px var(--glow), inset 0 0 40px rgba(0,0,0,.5);
+  animation: cardIn .5s cubic-bezier(.4,0,.2,1);
+}
+.diag-title {
+  font-size: .78rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 14px;
+}
+.diag-bars { display: flex; flex-direction: column; gap: 8px; }
+.diag-bar-row { display: flex; align-items: center; gap: 10px; }
+.diag-bar-label { font-size: .76rem; color: var(--text); width: 160px; flex-shrink: 0; }
+.diag-bar-track { flex: 1; height: 10px; background: rgba(255,255,255,.07); border-radius: 5px; overflow: hidden; }
+.diag-bar-fill { height: 100%; border-radius: 5px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  width: 0; transition: width 1.4s cubic-bezier(.4,0,.2,1); }
+.diag-bar-pct { font-size: .75rem; color: var(--accent); font-weight: 700; width: 42px; text-align: right; }
+
+/* ════════════════════════════════════════ LIGHTBOX */
+#lightbox {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.92); display: none;
+  align-items: center; justify-content: center; cursor: zoom-out;
+}
+#lightbox.open { display: flex; }
+#lightbox img { max-width: 90vw; max-height: 90vh; border-radius: 8px; border: 1px solid var(--accent); }
+
+/* ════════════════════════════════════════ PANEL THEMES */
+#panel-oracle {
+  --accent: #d4af37; --accent2: #ffd700;
+  --glow: rgba(212,175,55,.28); --glow-strong: rgba(212,175,55,.55);
+  --particle-r: 212; --particle-g: 175; --particle-b: 55;
+}
+#panel-pcb {
+  --accent: #22c55e; --accent2: #16a34a;
+  --glow: rgba(34,197,94,.3); --glow-strong: rgba(34,197,94,.6);
+  --particle-r: 34; --particle-g: 197; --particle-b: 94;
+}
+#panel-wm {
+  --accent: #00a8ff; --accent2: #0078d4;
+  --glow: rgba(0,168,255,.3); --glow-strong: rgba(0,168,255,.55);
+  --particle-r: 0; --particle-g: 168; --particle-b: 255;
+}
+#panel-borg {
+  --accent: #f97316; --accent2: #ea580c;
+  --glow: rgba(249,115,22,.3); --glow-strong: rgba(249,115,22,.55);
+  --particle-r: 249; --particle-g: 115; --particle-b: 22;
+}
+
+@media (max-width:600px) {
+  .panel-inner { padding: 0 12px; }
+  .msg-bubble  { max-width: 90%; }
+  .diag-bar-label { width: 110px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<div id="scanlines"></div>
+<div id="portal-flash"></div>
+
+<!-- ════════════════════ ORACLE PANEL ════════════════════ -->
+<div id="panel-oracle" class="panel active">
+  <div class="panel-inner">
+    <header class="p-header">
+      <div class="logo-group">
+        <div class="logo-icon"><i class="bi bi-robot"></i></div>
+        <div>
+          <div class="logo-title">Inspector Gadget</div>
+          <div class="logo-sub">SMA INDUSTRIAL INSPECTION PLATFORM</div>
+        </div>
+      </div>
+      <img src="/logo" alt="CORE-IC" style="height:36px;object-fit:contain;opacity:.92">
+      <button class="back-btn" onclick="resetPanel('oracle')" title="New Chat" style="margin-left:8px">&#x2B6F; New Chat</button>
+    </header>
+    <div class="chat-area" id="oracle-chat"></div>
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="msg-input" id="oracle-input" rows="1"
+          placeholder="Tell me what you need to inspect&#x2026;" autocomplete="off"></textarea>
+        <button class="send-btn" id="oracle-send" onclick="oracleSend()">&#x27A4;</button>
+      </div>
+      <div class="input-hint">Enter to send &middot; Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ PCB PANEL ════════════════════ -->
+<div id="panel-pcb" class="panel">
+  <div class="panel-inner">
+    <header class="p-header">
+      <div class="logo-group">
+        <div class="logo-icon"><i class="bi bi-cpu-fill"></i></div>
+        <div>
+          <div class="logo-title">PCB Inspector</div>
+          <div class="logo-sub">KNORR BOARD DEFECT DETECTION &middot; PORT 2829</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="spec-badge">PCB MODE</span>
+        <button class="back-btn" onclick="resetPanel('pcb')" title="New Chat">&#x2B6F; New Chat</button>
+        <button class="back-btn" onclick="goBack()">&#x2190; Inspector Gadget</button>
+      </div>
+    </header>
+    <div class="chat-area" id="pcb-chat"></div>
+    <div class="input-area">
+      <div class="upload-strip">
+        <label class="upload-btn" for="pcb-file-input">&#x1F4CE; Attach PCB Image</label>
+        <input type="file" id="pcb-file-input" accept="image/*" style="display:none"
+          onchange="pcbFileChosen(this)">
+        <label class="upload-btn" for="pcb-camera-input">&#x1F4F7; Take Photo</label>
+        <input type="file" id="pcb-camera-input" accept="image/*" capture="environment" style="display:none"
+          onchange="pcbFileChosen(this)">
+        <div class="file-chip" id="pcb-file-chip">
+          <span id="pcb-file-name"></span>
+          <button class="clear-file" onclick="pcbFileClear()" title="Remove">&#x2715;</button>
+        </div>
+      </div>
+      <div class="input-row" style="margin-top:8px;">
+        <textarea class="msg-input" id="pcb-input" rows="1"
+          placeholder="Describe the board or send a chat query&#x2026;" autocomplete="off"></textarea>
+        <button class="send-btn" id="pcb-send" onclick="pcbSend()">&#x27A4;</button>
+      </div>
+      <div class="input-hint">Enter to send &middot; Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ WM PANEL ════════════════════ -->
+<div id="panel-wm" class="panel">
+  <div class="panel-inner">
+    <header class="p-header">
+      <div class="logo-group">
+        <div class="logo-icon"><i class="bi bi-droplet-fill"></i></div>
+        <div>
+          <div class="logo-title">WM Inspector</div>
+          <div class="logo-sub">ARCELIK-BEKO DIAGNOSTICS &middot; PORT 2828</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="spec-badge">WM MODE</span>
+        <button class="back-btn" onclick="resetPanel('wm')" title="New Chat">&#x2B6F; New Chat</button>
+        <button class="back-btn" onclick="goBack()">&#x2190; Inspector Gadget</button>
+      </div>
+    </header>
+    <div class="chat-area" id="wm-chat"></div>
+    <div class="input-area">
+      <div class="upload-strip">
+        <label class="upload-btn" for="wm-file-input">&#x1F3A4; Attach Audio / Image</label>
+        <input type="file" id="wm-file-input" accept="image/*,audio/*"
+          style="display:none" onchange="wmFileChosen(this)">
+        <div class="file-chip" id="wm-file-chip">
+          <span id="wm-file-name"></span>
+          <button class="clear-file" onclick="wmFileClear()" title="Remove">&#x2715;</button>
+        </div>
+      </div>
+      <div class="input-row" style="margin-top:8px;">
+        <textarea class="msg-input" id="wm-input" rows="1"
+          placeholder="Describe the issue or noise pattern&#x2026;" autocomplete="off"></textarea>
+        <button class="send-btn" id="wm-send" onclick="wmSend()">&#x27A4;</button>
+      </div>
+      <div class="input-hint">Enter to send &middot; Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+
+<div id="lightbox" onclick="closeLightbox()">
+  <img id="lightbox-img" src="" alt="Inspection image">
+</div>
+
+<!-- ════════════════════ BORG PANEL ════════════════════ -->
+<div id="panel-borg" class="panel">
+  <div class="panel-inner">
+    <header class="p-header">
+      <div class="logo-group">
+        <div class="logo-icon"><i class="bi bi-lightning-charge-fill"></i></div>
+        <div>
+          <div class="logo-title">BORG Inspector</div>
+          <div class="logo-sub">BORG AUTOMOTIVE ALTERNATOR ASSESSMENT &middot; PORT 2827</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="spec-badge">BORG MODE</span>
+        <button class="back-btn" onclick="resetPanel('borg')" title="New Chat">&#x2B6F; New Chat</button>
+        <button class="back-btn" onclick="goBack()">&#x2190; Inspector Gadget</button>
+      </div>
+    </header>
+    <div class="chat-area" id="borg-chat"></div>
+    <div class="input-area">
+      <div class="upload-strip">
+        <label class="upload-btn" for="borg-video-input">&#x1F4F9; Record Video</label>
+        <input type="file" id="borg-video-input" accept="video/*" capture="environment"
+          style="display:none" onchange="borgVideoChosen(this)">
+        <div class="file-chip" id="borg-file-chip">
+          <span id="borg-file-name"></span>
+          <button class="clear-file" onclick="borgFileClear()" title="Remove">&#x2715;</button>
+        </div>
+      </div>
+      <div class="input-row" style="margin-top:8px;">
+        <textarea class="msg-input" id="borg-input" rows="1"
+          placeholder="Describe the alternator or record a video for inspection&#x2026;" autocomplete="off"></textarea>
+        <button class="send-btn" id="borg-send" onclick="borgSend()">&#x27A4;</button>
+      </div>
+      <div class="input-hint">Enter to send &middot; Shift+Enter for new line</div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const _HOST      = window.location.hostname;
+const ORACLE_URL = `http://${_HOST}:2830`;
+const PCB_URL    = `http://${_HOST}:2829`;
+const WM_URL     = `http://${_HOST}:2828`;
+const BORG_URL   = `http://${_HOST}:2827`;
+
+const SESSIONS = {
+  oracle: 'oracle_' + Math.random().toString(36).slice(2,10),
+  pcb:    'pcb_'    + Math.random().toString(36).slice(2,10),
+  wm:     'wm_'     + Math.random().toString(36).slice(2,10),
+  borg:   'borg_'   + Math.random().toString(36).slice(2,10),
+};
+
+let currentPanel = 'oracle';
+let busy = { oracle: false, pcb: false, wm: false, borg: false };
+
+// ── Canvas ──────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('bg-canvas');
+const ctx    = canvas.getContext('2d');
+let W, H;
+
+const MODES = {
+  oracle: { r:212, g:175, b:55,  hue:45,  bg:'#06060f', ca:0,    wa:0    },
+  pcb:    { r:34,  g:197, b:94,  hue:142, bg:'#030f08', ca:.045, wa:0    },
+  wm:     { r:0,   g:168, b:255, hue:200, bg:'#030914', ca:0,    wa:.038 },
+  borg:   { r:249, g:115, b:22,  hue:25,  bg:'#0f0600', ca:0,    wa:0    },
+};
+let canvasMode = 'oracle';
+
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+let particles = [];
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random()*W; this.y = Math.random()*H;
+    this.r = Math.random()*1.7+.35;
+    this.vx = (Math.random()-.5)*.4; this.vy = (Math.random()-.5)*.4;
+    this.hue = MODES[canvasMode].hue + (Math.random()-.5)*30;
+    this.a = Math.random()*.55+.18;
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x<0||this.x>W) { this.vx*=-1; this.x=Math.max(0,Math.min(W,this.x)); }
+    if (this.y<0||this.y>H) { this.vy*=-1; this.y=Math.max(0,Math.min(H,this.y)); }
+    this.hue += .08;
+  }
+  draw() {
+    ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    ctx.fillStyle = 'hsla('+this.hue+',100%,65%,'+this.a+')'; ctx.fill();
+  }
+}
+for (let i=0;i<110;i++) particles.push(new Particle());
+
+let waveOff = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const m = MODES[canvasMode];
+  waveOff += .012;
+  ctx.fillStyle = m.bg+'e8'; ctx.fillRect(0,0,W,H);
+
+  if (m.ca > 0) {
+    const gs=56;
+    ctx.strokeStyle='rgba(0,212,255,'+m.ca+')'; ctx.lineWidth=.8;
+    for (let x=0;x<W;x+=gs) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for (let y=0;y<H;y+=gs) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.fillStyle='rgba(0,212,255,'+(m.ca*2)+')';
+    for (let x=0;x<W;x+=gs) for (let y=0;y<H;y+=gs) { ctx.beginPath(); ctx.arc(x,y,2,0,Math.PI*2); ctx.fill(); }
+  }
+  if (m.wa > 0) {
+    for (let w=0;w<5;w++) {
+      ctx.beginPath(); ctx.strokeStyle='rgba(80,200,120,'+(m.wa-w*.005)+')'; ctx.lineWidth=.9;
+      for (let x=0;x<=W;x+=4) {
+        const y=H*(.3+w*.1)+Math.sin(x/220+waveOff+w*.8)*(45+w*22);
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+  }
+  particles.forEach(p=>{p.update();p.draw();});
+  for (let i=0;i<particles.length;i++) for (let j=i+1;j<particles.length;j++) {
+    const dx=particles[i].x-particles[j].x, dy=particles[i].y-particles[j].y;
+    const d=Math.sqrt(dx*dx+dy*dy);
+    if (d<115) {
+      ctx.beginPath();
+      ctx.strokeStyle='rgba('+m.r+','+m.g+','+m.b+','+((1-d/115)*.17)+')';
+      ctx.lineWidth=.55; ctx.moveTo(particles[i].x,particles[i].y); ctx.lineTo(particles[j].x,particles[j].y); ctx.stroke();
+    }
+  }
+}
+animate();
+
+function switchCanvasMode(p) { canvasMode=p; particles.forEach(pt=>{pt.hue=MODES[p].hue+(Math.random()-.5)*30;}); }
+
+// ── Panel Transitions ───────────────────────────────────────────────────────
+function showPanel(name) {
+  const prev=document.getElementById('panel-'+currentPanel);
+  const next=document.getElementById('panel-'+name);
+  const flash=document.getElementById('portal-flash');
+  const m=MODES[name];
+  flash.style.setProperty('--glow-strong','rgba('+m.r+','+m.g+','+m.b+',.55)');
+  flash.classList.remove('burst'); void flash.offsetWidth; flash.classList.add('burst');
+  prev.classList.remove('active'); prev.classList.add('exit');
+  setTimeout(function(){
+    prev.classList.remove('exit'); next.classList.add('active');
+    currentPanel=name; switchCanvasMode(name);
+  }, 280);
+}
+function goBack() { showPanel('oracle'); }
+
+// ── Shared Chat ─────────────────────────────────────────────────────────────
+const ICONS = { oracle:'<i class="bi bi-robot"></i>', pcb:'<i class="bi bi-cpu-fill"></i>', wm:'<i class="bi bi-droplet-fill"></i>', borg:'<i class="bi bi-lightning-charge-fill"></i>' };
+
+// ── Response Formatting (for WM agent structured responses) ─────────────────
+function parseAndFormatResponse(text) {
+  // Extract <thinking> tags if present
+  const thinkingMatch = text.match(/<thinking>([\s\S]*?)<\/thinking>([\s\S]*)/i);
+  let thinking = null;
+  let response = text;
+  
+  if (thinkingMatch) {
+    thinking = thinkingMatch[1].trim();
+    response = thinkingMatch[2].trim();
+  }
+  
+  // Format the response with HTML
+  response = formatResponse(response);
+  
+  return { thinking, response };
+}
+
+function formatResponse(text) {
+  // Replace markdown-style bold **text** with <strong>
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // Enhance emoji headers with styling
+  text = text.replace(/^(🔊|📷|⚡|✅|❌|⚠️|📊|🔧|🔍|🔴|🟡|🟢|👋|💭)/gm, '<strong>$1</strong>');
+  
+  // Preserve visual separator lines with styling
+  text = text.replace(/^(━+)$/gm, '<span style="color: rgba(255,255,255,0.2); display: block; margin: 8px 0; user-select: none;">$1</span>');
+  text = text.replace(/^(═+)$/gm, '<span style="color: rgba(255,255,255,0.15); display: block; margin: 6px 0; user-select: none;">$1</span>');
+  
+  // Highlight confidence bars with color
+  text = text.replace(/(█+[░]*)/g, '<span style="color: #50c878; font-weight: bold; letter-spacing: 1px;">$1</span>');
+  
+  // Color severity indicators
+  text = text.replace(/🔴 HIGH/g, '<span style="color: #ff4444; font-weight: bold;">🔴 HIGH</span>');
+  text = text.replace(/🟡 MEDIUM/g, '<span style="color: #ffaa00; font-weight: bold;">🟡 MEDIUM</span>');
+  text = text.replace(/🟢 LOW/g, '<span style="color: #44ff44; font-weight: bold;">🟢 LOW</span>');
+  
+  // Highlight percentages
+  text = text.replace(/(\d+\.?\d*)%/g, '<strong style="color: var(--accent);">$1%</strong>');
+  
+  // Preserve line breaks
+  text = text.replace(/\n/g, '<br>');
+  
+  return text;
+}
+
+function addMsg(areaId, role, text, cssExtra) {
+  const area=document.getElementById(areaId);
+  const row=document.createElement('div'); row.className='msg-row '+role;
+  const av=document.createElement('div'); av.className='avatar';
+  av.innerHTML = role==='agent' ? (ICONS[currentPanel]||'<i class="bi bi-robot"></i>') : '👤';
+  const bubble=document.createElement('div');
+  bubble.className='msg-bubble'+(cssExtra?' '+cssExtra:'');
+  if (role==='agent') { row.appendChild(av); row.appendChild(bubble); }
+  else { bubble.textContent=text; row.appendChild(bubble); row.appendChild(av); }
+  area.appendChild(row); area.scrollTop=area.scrollHeight;
+  if (role==='agent') typewrite(bubble, text, function(){ area.scrollTop=area.scrollHeight; });
+  return bubble;
+}
+
+// Enhanced addMsg for formatted content (used by WM agent)
+function addFormattedMsg(areaId, role, text, cssExtra) {
+  const area=document.getElementById(areaId);
+  const row=document.createElement('div'); row.className='msg-row '+role;
+  const av=document.createElement('div'); av.className='avatar';
+  av.innerHTML = role==='agent' ? (ICONS[currentPanel]||'<i class="bi bi-robot"></i>') : '👤';
+  
+  if (role === 'agent') {
+    const { thinking, response } = parseAndFormatResponse(text);
+    
+    // Create thinking box if present
+    if (thinking) {
+      const thinkBox = document.createElement('div');
+      thinkBox.className = 'thinking-box collapsed';
+      thinkBox.innerHTML = '<div class="think-content">' + thinking.replace(/\n/g, '<br>') + '</div>';
+      thinkBox.onclick = function() { this.classList.toggle('collapsed'); };
+      
+      const thinkRow = document.createElement('div');
+      thinkRow.className = 'msg-row agent';
+      thinkRow.appendChild(av.cloneNode(true));
+      thinkRow.appendChild(thinkBox);
+      area.appendChild(thinkRow);
+    }
+    
+    // Create response bubble
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble formatted' + (cssExtra ? ' ' + cssExtra : '');
+    bubble.innerHTML = response;
+    
+    const responseRow = document.createElement('div');
+    responseRow.className = 'msg-row agent';
+    if (!thinking) responseRow.appendChild(av); // Only add avatar if no thinking box
+    else responseRow.appendChild(document.createElement('div')); // Empty spacer
+    responseRow.appendChild(bubble);
+    
+    area.appendChild(responseRow);
+    area.scrollTop = area.scrollHeight;
+    
+    return bubble;
+  } else {
+    // User message
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble' + (cssExtra ? ' ' + cssExtra : '');
+    bubble.textContent = text;
+    row.appendChild(bubble);
+    row.appendChild(av);
+    area.appendChild(row);
+    area.scrollTop = area.scrollHeight;
+    return bubble;
+  }
+}
+
+function typewrite(el, text, cb) {
+  let i=0; const speed=Math.max(8,Math.min(28,1800/text.length));
+  (function tick(){ if(i<text.length){el.textContent+=text[i++];setTimeout(tick,speed);}else if(cb)cb(); })();
+}
+
+function showTyping(areaId, icon) {
+  const area=document.getElementById(areaId);
+  const row=document.createElement('div'); row.className='msg-row agent'; row.id=areaId+'-typing';
+  const av=document.createElement('div'); av.className='avatar'; av.innerHTML=ICONS[icon||currentPanel]||'<i class="bi bi-robot"></i>';
+  const bubble=document.createElement('div'); bubble.className='msg-bubble';
+  bubble.innerHTML='<div class="typing-dots"><div class="td"></div><div class="td"></div><div class="td"></div></div>';
+  row.appendChild(av); row.appendChild(bubble); area.appendChild(row); area.scrollTop=area.scrollHeight;
+}
+function removeTyping(areaId) { const el=document.getElementById(areaId+'-typing'); if(el)el.remove(); }
+
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,120)+'px'; }
+function bindInput(id, fn) {
+  const el=document.getElementById(id);
+  el.addEventListener('input',function(){autoResize(el);});
+  el.addEventListener('keydown',function(e){ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();fn();} });
+}
+function appendNode(areaId, node) { const a=document.getElementById(areaId); a.appendChild(node); a.scrollTop=a.scrollHeight; }
+
+// ── Oracle ──────────────────────────────────────────────────────────────────
+async function oracleSend() {
+  if (busy.oracle) return;
+  const inp=document.getElementById('oracle-input');
+  const text=inp.value.trim(); if (!text) return;
+  inp.value=''; autoResize(inp); busy.oracle=true;
+  document.getElementById('oracle-send').disabled=true;
+  addMsg('oracle-chat','user',text);
+  showTyping('oracle-chat','oracle');
+  try {
+    const res=await fetch(ORACLE_URL+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:text,session_id:SESSIONS.oracle})});
+    const data=await res.json(); removeTyping('oracle-chat');
+    const intent=data.intent||'unknown';
+    addMsg('oracle-chat','agent',data.response||'\u2026', intent!=='unknown'?'accent-bubble':'');
+    if (data.trace) addFlowTrace('oracle-chat', data.trace);
+    if (intent==='pcb')              setTimeout(function(){transitionToSpecialist('pcb');},1400);
+    else if (intent==='washing_machine') setTimeout(function(){transitionToSpecialist('wm');},1400);
+    else if (intent==='borg')        setTimeout(function(){transitionToSpecialist('borg');},1400);
+  } catch(err) {
+    removeTyping('oracle-chat');
+    addMsg('oracle-chat','agent','Connection error \u2014 ensure the guidance agent is running on port 2830.');
+    console.error(err);
+  }
+  busy.oracle=false; document.getElementById('oracle-send').disabled=false;
+  document.getElementById('oracle-input').focus();
+}
+
+function transitionToSpecialist(panel) {
+  showPanel(panel);
+  setTimeout(function(){
+    if (document.getElementById(panel+'-chat').childElementCount===0)
+      addMsg(panel+'-chat','agent',WELCOME_MSGS[panel]||'Ready.','accent-bubble');
+  }, 360);
+}
+
+// ── PCB ─────────────────────────────────────────────────────────────────────
+function pcbFileChosen(input) {
+  if (!input.files[0]) return;
+  document.getElementById('pcb-file-name').textContent=input.files[0].name;
+  document.getElementById('pcb-file-chip').classList.add('has-file');
+}
+function pcbFileClear() {
+  document.getElementById('pcb-file-input').value='';
+  document.getElementById('pcb-camera-input').value='';
+  document.getElementById('pcb-file-chip').classList.remove('has-file');
+  document.getElementById('pcb-file-name').textContent='';
+}
+/* Resize an image File to max 1024px before uploading — keeps accuracy while
+   cutting upload from ~4 MB (phone photo) to ~150 KB. */
+function pcbResizeImage(file) {
+  return new Promise(function(resolve) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      let w = img.naturalWidth, h = img.naturalHeight;
+      const MAX = 1024;
+      if (Math.max(w, h) <= MAX) { resolve(file); return; }
+      const scale = MAX / Math.max(w, h);
+      w = Math.round(w * scale); h = Math.round(h * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(function(blob) {
+        resolve(blob || file);
+      }, 'image/jpeg', 0.88);
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+async function pcbUploadFile(file) {
+  const form=new FormData();
+  const resized = await pcbResizeImage(file);
+  form.append('file', resized, 'pcb_image.jpg');
+  const res=await fetch(PCB_URL+'/upload',{method:'POST',body:form});
+  const data=await res.json(); if(data.success) return data.file_path;
+  throw new Error(data.detail||'Upload failed');
+}
+async function pcbSend() {
+  if (busy.pcb) return;
+  const inp=document.getElementById('pcb-input');
+  const text=inp.value.trim();
+  const file=(document.getElementById('pcb-file-input').files[0]||document.getElementById('pcb-camera-input').files[0]);
+  if(!text&&!file) return;
+  inp.value=''; autoResize(inp); busy.pcb=true;
+  document.getElementById('pcb-send').disabled=true;
+  addMsg('pcb-chat','user',text||(file?'[Inspecting: '+file.name+']':''));
+  showTyping('pcb-chat','pcb');
+  try {
+    let imgPath=null;
+    if (file) { try { imgPath=await pcbUploadFile(file); pcbFileClear(); }
+      catch(e){ console.error('Upload error:',e); addMsg('pcb-chat','agent','\u26A0\uFE0F Upload failed: '+e.message+'. Sending text only.'); } }
+    const body={message:text||(imgPath?'Please inspect this PCB image for defects.':''),session_id:SESSIONS.pcb};
+    if (imgPath) body.image_path=imgPath;
+    const res=await fetch(PCB_URL+'/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const data=await res.json(); removeTyping('pcb-chat');
+    addMsg('pcb-chat','agent',data.response||'\u2026', data.tool_result?'accent-bubble':'');
+    if (data.trace) addFlowTrace('pcb-chat', data.trace);
+    if (data.tool_result) setTimeout(function(){renderPCBCard('pcb-chat',data.tool_result);},400);
+  } catch(err){
+    removeTyping('pcb-chat');
+    addMsg('pcb-chat','agent','Connection error \u2014 ensure the Knorr agent is running on port 2829.');
+    console.error(err);
+  }
+  busy.pcb=false; document.getElementById('pcb-send').disabled=false;
+  document.getElementById('pcb-input').focus();
+}
+
+function renderPCBCard(areaId, tool) {
+  const statusVal=(tool.overall_status||tool.status||'').toUpperCase();
+  const ok=statusVal==='OK';
+  const conf=Math.round(((tool.classification_confidence||tool.confidence)||0)*100);
+  const def=tool.defect_info||{};
+  const card=document.createElement('div'); card.className='result-card';
+  let h='<div class="result-status"><span class="'+(ok?'status-ok':'status-fail')+'">'+(ok?'\u2705 PASS':'\u274C DEFECT DETECTED')+'</span></div>';
+  h+='<div class="result-meta">';
+  if(def.defect_type||tool.classification) h+='<span class="meta-pill">Type: '+(def.defect_type||tool.classification)+'</span>';
+  if(def.location||(tool.defects_found&&tool.defects_found[0])) h+='<span class="meta-pill">Location: '+(def.location||(tool.defects_found[0]&&tool.defects_found[0].location)||'')+'</span>';
+  if(conf>0)          h+='<span class="meta-pill">Confidence: '+conf+'%</span>';
+  if(tool.board_type) h+='<span class="meta-pill">Board: '+tool.board_type+'</span>';
+  h+='</div>';
+  if(conf>0) h+='<div class="conf-row"><span class="conf-label">Confidence</span>'
+    +'<div class="conf-track"><div class="conf-fill" style="width:0%" data-target="'+conf+'"></div></div>'
+    +'<span class="conf-pct">'+conf+'%</span></div>';
+  const imgs=[];
+  // Support both old field names and new GuidedPCBInspector field names
+  const markedSrc  = tool.marked_image_base64  || tool.visualization;
+  const croppedSrc = tool.cropped_image_base64 || tool.grid_overlay;
+  const zoomedSrc  = tool.zoomed_image_base64  ||
+    (Array.isArray(tool.defects_found) && tool.defects_found[0] ? tool.defects_found[0].zoomed_image : null);
+  function toImgSrc(s){ if(!s) return null; return s.startsWith('data:') ? s : 'data:image/png;base64,'+s; }
+  if(markedSrc)  imgs.push({src:toImgSrc(markedSrc),  label:'Inspection Result'});
+  if(zoomedSrc)  imgs.push({src:toImgSrc(zoomedSrc),  label:'Defect Cell'});
+  if(croppedSrc && croppedSrc !== markedSrc) imgs.push({src:toImgSrc(croppedSrc), label:'Grid Overlay'});
+  if(Array.isArray(tool.similar_images)) tool.similar_images.slice(0,3).forEach(function(si,i){
+    const s=si.base64?(si.base64.startsWith('data:')?si.base64:'data:image/png;base64,'+si.base64):(si.path||'');
+    if(s) imgs.push({src:s,label:'Similar '+(i+1)});
+  });
+  if(imgs.length) {
+    h+='<div class="result-images">'; imgs.forEach(function(im){
+      h+='<div><img class="result-img" src="'+im.src+'" alt="'+im.label+'" onclick="openLightbox(this.src)">'
+        +'<div class="result-img-label">'+im.label+'</div></div>';
+    }); h+='</div>';
+  }
+  card.innerHTML=h; appendNode(areaId,card);
+  requestAnimationFrame(function(){ card.querySelectorAll('.conf-fill').forEach(function(el){el.style.width=el.dataset.target+'%';}); });
+}
+
+// ── WM ──────────────────────────────────────────────────────────────────────
+let wmPendingFile=null;
+function wmFileChosen(input) {
+  if (!input.files[0]) return;
+  wmPendingFile=input.files[0];
+  document.getElementById('wm-file-name').textContent=wmPendingFile.name;
+  document.getElementById('wm-file-chip').classList.add('has-file');
+}
+function wmFileClear() {
+  document.getElementById('wm-file-input').value='';
+  document.getElementById('wm-file-chip').classList.remove('has-file');
+  document.getElementById('wm-file-name').textContent='';
+  wmPendingFile=null;
+}
+async function wmUploadFile(file) {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(WM_URL + '/upload', { method: 'POST', body: form });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (data.success) return data.file_path;   // absolute path on the server
+  throw new Error(data.detail || 'Upload failed');
+}
+async function wmSend() {
+  if (busy.wm) return;
+  const inp=document.getElementById('wm-input');
+  let text=inp.value.trim(); if(!text&&!wmPendingFile) return;
+  let filePath = null;
+  let pendingFileRef = null;
+  if (wmPendingFile) {
+    const kind=wmPendingFile.type.startsWith('audio/')?'audio recording':'image';
+    const pendingFile = wmPendingFile;
+    pendingFileRef = wmPendingFile;
+    wmFileClear();
+    try {
+      filePath = await wmUploadFile(pendingFile);
+      text = (text || 'Please analyse this for washing machine faults.')
+           + '\n[' + kind + ' attached: "' + pendingFile.name + '"]';
+    } catch(e) {
+      console.error('Upload error:', e);
+      addMsg('wm-chat','agent','\u26A0\uFE0F Upload failed: ' + e.message + '. Please try again.');
+      busy.wm = false;
+      document.getElementById('wm-send').disabled = false;
+      return;
+    }
+  }
+  inp.value=''; autoResize(inp); busy.wm=true;
+  document.getElementById('wm-send').disabled=true;
+  // Show user message — with inline image preview if it's an image file
+  if (pendingFileRef && pendingFileRef.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const area = document.getElementById('wm-chat');
+      const row = document.createElement('div'); row.className = 'msg-row user';
+      const bubble = document.createElement('div'); bubble.className = 'msg-bubble';
+      bubble.innerHTML = (text ? '<div style="margin-bottom:6px">' + text.split('\n[')[0] + '</div>' : '')
+        + '<img src="' + e.target.result + '" alt="uploaded" style="max-width:220px;max-height:180px;border-radius:8px;display:block;cursor:pointer" onclick="openLightbox(this.src)">';
+      const av = document.createElement('div'); av.className = 'avatar'; av.textContent = '👤';
+      row.appendChild(bubble); row.appendChild(av);
+      area.appendChild(row); area.scrollTop = area.scrollHeight;
+      showTyping('wm-chat','wm');
+    };
+    reader.readAsDataURL(pendingFileRef);
+  } else {
+    addMsg('wm-chat','user',text);
+    showTyping('wm-chat','wm');
+  }
+  try {
+    const body = { message: text, session_id: SESSIONS.wm };
+    if (filePath) body.file_path = filePath;
+    const res=await fetch(WM_URL+'/inspect',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(body)});
+    const data=await res.json(); removeTyping('wm-chat');
+    const reply=data.response||'\u2026';
+    // Use formatted message display for beautifully structured responses
+    addFormattedMsg('wm-chat','agent',reply,'accent-bubble');
+    if (data.trace) addFlowTrace('wm-chat', data.trace);
+    // Don't extract diagnostic bars anymore - they're already formatted in the response
+    // const bars=extractDiagBars(reply);
+    // if(bars.length>0) setTimeout(function(){renderWMDiagCard('wm-chat',bars);},500);
+  } catch(err){
+    removeTyping('wm-chat');
+    addMsg('wm-chat','agent','Connection error \u2014 ensure the Arcelik agent is running on port 2828.');
+    console.error(err);
+  }
+  busy.wm=false; document.getElementById('wm-send').disabled=false;
+  document.getElementById('wm-input').focus();
+}
+
+const FAULT_PATTERNS=[
+  {keys:['bearing','bearings'],label:'Bearing Fault'},
+  {keys:['pump','water pump'],label:'Pump Noise'},
+  {keys:['drum','drum imbalance'],label:'Drum Imbalance'},
+  {keys:['motor','motor noise'],label:'Motor Issue'},
+  {keys:['shock absorber','absorber'],label:'Shock Absorber'},
+  {keys:['belt','drive belt'],label:'Drive Belt'},
+  {keys:['foreign object','loose object'],label:'Foreign Object'},
+  {keys:['filter','blockage','clogged'],label:'Filter Blockage'},
+];
+
+function extractDiagBars(text) {
+  const lower=text.toLowerCase(); const result=[];
+  const pcts=[]; let m; const re=/(\d{1,3})\s*%/g;
+  while((m=re.exec(text))!==null) pcts.push(parseInt(m[1]));
+  let pi=0;
+  FAULT_PATTERNS.forEach(function(fp){
+    const found=fp.keys.some(function(k){return lower.includes(k);});
+    if(found){ let pct=pcts[pi]||estimateConf(lower,fp.keys); pi++;
+      if(pct>0) result.push({label:fp.label,pct:Math.min(100,pct)}); }
+  });
+  return result;
+}
+function estimateConf(lower,keys) {
+  const H=['high','likely','probable','defin','certain','strong'];
+  const M=['possible','may','might','could','suspect','indicat'];
+  const L=['unlikely','minor','low','slight'];
+  for(let ki=0;ki<keys.length;ki++){
+    const idx=lower.indexOf(keys[ki]); if(idx===-1) continue;
+    const ctx=lower.slice(Math.max(0,idx-60),idx+60);
+    if(H.some(function(h){return ctx.includes(h);})) return 82+Math.floor(Math.random()*12);
+    if(M.some(function(h){return ctx.includes(h);})) return 50+Math.floor(Math.random()*25);
+    if(L.some(function(h){return ctx.includes(h);})) return 20+Math.floor(Math.random()*20);
+    return 55+Math.floor(Math.random()*30);
+  }
+  return 0;
+}
+function renderWMDiagCard(areaId,bars){
+  const card=document.createElement('div'); card.className='diag-card';
+  let bh=bars.map(function(b){
+    return '<div class="diag-bar-row"><span class="diag-bar-label">'+b.label+'</span>'
+      +'<div class="diag-bar-track"><div class="diag-bar-fill" data-target="'+b.pct+'"></div></div>'
+      +'<span class="diag-bar-pct">'+b.pct+'%</span></div>';
+  }).join('');
+  card.innerHTML='<div class="diag-title">\uD83D\uDCCA FAULT PROBABILITY ANALYSIS</div><div class="diag-bars">'+bh+'</div>';
+  appendNode(areaId,card);
+  requestAnimationFrame(function(){
+    setTimeout(function(){ card.querySelectorAll('.diag-bar-fill').forEach(function(el){el.style.width=el.dataset.target+'%';}); },80);
+  });
+}
+
+// ── BORG ─────────────────────────────────────────────────────────────────────
+let borgPendingVideo = null;
+function borgVideoChosen(input) {
+  if (!input.files[0]) return;
+  borgPendingVideo = input.files[0];
+  document.getElementById('borg-file-name').textContent = borgPendingVideo.name;
+  document.getElementById('borg-file-chip').classList.add('has-file');
+}
+function borgFileClear() {
+  document.getElementById('borg-video-input').value = '';
+  document.getElementById('borg-file-chip').classList.remove('has-file');
+  document.getElementById('borg-file-name').textContent = '';
+  borgPendingVideo = null;
+}
+/* Extract middle frame from a video File as a JPEG Blob */
+function borgExtractFrames(videoFile, nFrames) {
+  nFrames = nFrames || 3;
+  return new Promise(function(resolve, reject) {
+    const video = document.createElement('video');
+    video.muted = true; video.playsInline = true;
+    const url = URL.createObjectURL(videoFile);
+    video.src = url;
+    video.onloadedmetadata = function() {
+      if (video.duration < 2) { URL.revokeObjectURL(url); reject(new Error('Video too short (minimum 2 seconds).')); return; }
+      const positions = [];
+      for (let i = 1; i <= nFrames; i++) positions.push(video.duration * i / (nFrames + 1));
+      const frameW = 640, frames = [];
+      let frameH = Math.round(video.videoHeight * frameW / video.videoWidth) || frameW;
+      let idx = 0;
+      function seekNext() {
+        if (idx >= positions.length) {
+          // stitch frames side by side
+          const canvas = document.createElement('canvas');
+          canvas.width = frameW * frames.length;
+          canvas.height = frameH;
+          const ctx = canvas.getContext('2d');
+          frames.forEach(function(img, i) { ctx.drawImage(img, i * frameW, 0, frameW, frameH); });
+          URL.revokeObjectURL(url);
+          canvas.toBlob(function(blob) {
+            if (!blob) { reject(new Error('Frame extraction failed')); return; }
+            resolve(blob);
+          }, 'image/jpeg', 0.85);
+          return;
+        }
+        video.currentTime = positions[idx];
+      }
+      video.onseeked = function() {
+        try {
+          const fc = document.createElement('canvas');
+          fc.width = frameW; fc.height = frameH;
+          fc.getContext('2d').drawImage(video, 0, 0, frameW, frameH);
+          const img = new Image(); img.src = fc.toDataURL();
+          frames.push(img);
+          idx++;
+          seekNext();
+        } catch(e) { URL.revokeObjectURL(url); reject(e); }
+      };
+      video.onerror = function() { URL.revokeObjectURL(url); reject(new Error('Could not read video file')); };
+      seekNext();
+    };
+  });
+}
+async function borgUploadVideo(file) {
+  const form = new FormData();
+  /* On mobile, videos are often 50-200 MB. Extract a single JPEG frame instead
+     so the upload is ~50 KB regardless of device.
+     On desktop with small files (<5 MB) keep the original for video validation. */
+  if (file.size > 5 * 1024 * 1024) {
+    let frameBlob;
+    try { frameBlob = await borgExtractFrames(file, 3); }
+    catch(e) { throw e; }
+    form.append('file', frameBlob, 'alternator_frame.jpg');
+  } else {
+    form.append('file', file);
+  }
+  const res = await fetch(BORG_URL + '/upload', { method: 'POST', body: form });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (data.too_short) throw new Error(data.message || 'Video too short (minimum 2 seconds).');
+  if (data.success) return data.file_path;
+  throw new Error(data.detail || data.message || 'Upload failed');
+}
+async function borgSend() {
+  if (busy.borg) return;
+  const inp = document.getElementById('borg-input');
+  let text = inp.value.trim();
+  if (!text && !borgPendingVideo) return;
+  let filePath = null;
+  if (borgPendingVideo) {
+    const pendingFile = borgPendingVideo;
+    borgFileClear();
+    addMsg('borg-chat', 'user', text || '[Uploading: ' + pendingFile.name + ']');
+    showTyping('borg-chat', 'borg');
+    try {
+      if (pendingFile.size > 5 * 1024 * 1024) {
+        // large video: frames extracted client-side
+      }
+      filePath = await borgUploadVideo(pendingFile);
+      text = (text || 'Please inspect this alternator video for remanufacturing assessment.');
+    } catch(e) {
+      removeTyping('borg-chat');
+      addMsg('borg-chat', 'agent', '\u26A0\uFE0F ' + e.message);
+      busy.borg = false;
+      document.getElementById('borg-send').disabled = false;
+      return;
+    }
+  } else {
+    addMsg('borg-chat', 'user', text);
+    showTyping('borg-chat', 'borg');
+  }
+  inp.value = ''; autoResize(inp); busy.borg = true;
+  document.getElementById('borg-send').disabled = true;
+  try {
+    const body = { message: text, session_id: SESSIONS.borg };
+    if (filePath) body.file_path = filePath;
+    const res = await fetch(BORG_URL + '/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json(); removeTyping('borg-chat');
+    if (data.tool_result && !data.tool_result.success && data.tool_result.not_alternator) {
+      addMsg('borg-chat', 'agent', '\u26A0\uFE0F ' + data.tool_result.error, 'accent-bubble');
+    } else {
+      addFormattedMsg('borg-chat', 'agent', data.response || '\u2026', data.tool_result ? 'accent-bubble' : '');
+      if (data.trace) addFlowTrace('borg-chat', data.trace);
+      if (data.tool_result && data.tool_result.success) {
+          renderBorgCard('borg-chat', data.tool_result);
+        }
+    }
+  } catch(err) {
+    removeTyping('borg-chat');
+    addMsg('borg-chat', 'agent', 'Connection error \u2014 ensure the BORG agent is running on port 2827.');
+    console.error(err);
+  }
+  busy.borg = false; document.getElementById('borg-send').disabled = false;
+  document.getElementById('borg-input').focus();
+}
+
+function renderBorgCard(areaId, tool) {
+  const card = document.createElement('div'); card.className = 'result-card';
+  const accepted = tool.accepted !== false;
+  const comps = tool.components || {};
+  const STATUS_ICON = { damaged: '\u26A0\uFE0F Damaged', ok: '\u2705 OK', unknown: '\u2753 Unknown' };
+  const STATUS_COLOR = { damaged: '#f97316', ok: '#22c55e', unknown: '#aaa' };
+
+  let h = '<div class="result-status"><span class="' + (accepted ? 'status-ok' : 'status-fail') + '">'
+    + (accepted ? '\u2705 ACCEPTED FOR REMANUFACTURING' : '\u274C NOT ACCEPTED') + '</span></div>';
+
+  // Component table — no confidence column
+  h += '<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:.88rem">';
+  h += '<thead><tr style="color:var(--accent);border-bottom:1px solid rgba(249,115,22,.25)">'
+    + '<th style="text-align:left;padding:4px 8px">Component</th>'
+    + '<th style="text-align:center;padding:4px 8px">Status</th>'
+    + '</tr></thead><tbody>';
+  const compOrder = ['pulley', 'cover', 'casting'];
+  compOrder.forEach(function(k) {
+    const c = comps[k] || {};
+    const st = c.status || 'unknown';
+    const col = STATUS_COLOR[st] || '#aaa';
+    h += '<tr style="border-bottom:1px solid rgba(255,255,255,.06)">'
+      + '<td style="padding:5px 8px;color:#ccc">' + (c.label || k.charAt(0).toUpperCase()+k.slice(1)) + '</td>'
+      + '<td style="text-align:center;padding:5px 8px;color:' + col + ';font-weight:600">' + (STATUS_ICON[st] || st) + '</td>'
+      + '</tr>';
+  });
+  h += '</tbody></table>';
+
+  // Deductions
+  const deductions = tool.deductions || [];
+  if (deductions.length > 0) {
+    h += '<div style="margin:10px 0;padding:10px;background:rgba(249,115,22,.08);border-radius:8px;border:1px solid rgba(249,115,22,.2)">';
+    h += '<div style="color:var(--accent);font-weight:600;margin-bottom:6px;font-size:.85rem">\uD83D\uDCB0 COST DEDUCTIONS</div>';
+    deductions.forEach(function(d) {
+      h += '<div style="display:flex;justify-content:space-between;color:#ccc;font-size:.83rem;margin:3px 0">'
+        + '<span>' + d.label + '</span><span style="color:#f97316;font-weight:600">-\u20AC' + d.deduction.toFixed(2) + '</span></div>';
+    });
+    h += '<div style="border-top:1px solid rgba(249,115,22,.25);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700">'
+      + '<span style="color:#fff">Total Deduction</span>'
+      + '<span style="color:#f97316">-\u20AC' + (tool.total_deduction||0).toFixed(2) + '</span></div>';
+    if (tool.deposit_amount) {
+      h += '<div style="display:flex;justify-content:space-between;margin-top:4px;font-size:.83rem">'
+        + '<span style="color:#aaa">Estimated Refund</span>'
+        + '<span style="color:#22c55e;font-weight:600">\u20AC' + (tool.estimated_refund||0).toFixed(2) + '</span></div>';
+    }
+    h += '</div>';
+  } else {
+    h += '<div style="color:#22c55e;font-size:.83rem;margin:6px 0">\u2705 No deductions — unit in good condition.</div>';
+  }
+
+  // Video frames
+  const frames = tool.frames_base64 || [];
+  if (frames.length > 0) {
+    h += '<div class="result-images">';
+    frames.slice(0, 4).forEach(function(f, i) {
+      const src = f.startsWith('data:') ? f : 'data:image/jpeg;base64,' + f;
+      h += '<div><img class="result-img" src="' + src + '" alt="Frame ' + (i+1) + '" onclick="openLightbox(this.src)">'
+        + '<div class="result-img-label">Frame ' + (i+1) + '</div></div>';
+    });
+    h += '</div>';
+  }
+
+  if (tool.duration_sec) {
+    h += '<div style="font-size:.77rem;color:#666;margin-top:6px">Video duration: ' + tool.duration_sec + 's</div>';
+  }
+
+  card.innerHTML = h;
+  appendNode(areaId, card);
+}
+
+// ── Lightbox ─────────────────────────────────────────────────────────────────
+function openLightbox(src){ document.getElementById('lightbox-img').src=src; document.getElementById('lightbox').classList.add('open'); }
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeLightbox();});
+
+// ── Flow trace ───────────────────────────────────────────────────────────────
+function addFlowTrace(areaId, steps) {
+  if (!steps || !steps.length) return;
+  var area = document.getElementById(areaId);
+  if (!area) return;
+  var TYPE_CLASS = { tool_call: 'tool-call', tool_result: 'tool-result' };
+  var TYPE_LABEL = {
+    user_input:    '📥 user input',
+    agent_decision:'🧠 agent decision',
+    llm_reasoning: '🧠 llm reasoning',
+    routing:       '🔀 routing',
+    tool_call:     '🔧 tool call',
+    tool_result:   '✅ tool result',
+    final_response:'💬 final response',
+  };
+  var stepsHtml = steps.map(function(s) {
+    var cls = TYPE_CLASS[s.type] || '';
+    var lbl = TYPE_LABEL[s.type] || s.type;
+    var content = s.content || (s.tool ? 'tool: ' + s.tool : '');
+    return '<div class="flow-step ' + cls + '">'  
+      + '<span class="flow-step-n">' + s.step + '</span>'
+      + '<span class="flow-step-t">' + lbl + '</span>'
+      + '<span class="flow-step-c">' + content.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</span>'
+      + '</div>';
+  }).join('');
+  var div = document.createElement('div');
+  div.className = 'flow-trace';
+  div.innerHTML = '<div class="flow-trace-hdr">⚡ Execution Flow <span>' + steps.length + ' steps — click to expand</span></div>'
+    + '<div class="flow-steps">' + stepsHtml + '</div>';
+  div.addEventListener('click', function() { div.classList.toggle('open'); });
+  area.appendChild(div);
+  area.scrollTop = area.scrollHeight;
+}
+
+// ── Bindings & Welcome ───────────────────────────────────────────────────────
+const WELCOME_MSGS = {
+  oracle: 'Welcome to the SMA Industrial Inspection Platform. I am Inspector Gadget \u2014 your intelligent gateway to specialist AI inspection systems. Tell me what you need to inspect: PCB circuit boards, washing machine components, or alternators for remanufacturing, and I will activate the right expert system for you.',
+  pcb:    '\ud83d\udd0c Knorr PCB Inspection System online. Upload a board image or describe the issue \u2014 I\u2019ll run defect analysis with RAG-powered CLIP embeddings.',
+  wm:     '\ud83c\udf0a Arcelik-Beko Washing Machine Specialist ready. Describe the noise pattern, upload an audio recording or an image of the faulty component.',
+  borg:   '\u26a1 BORG Alternator Inspector ready. Upload a video of the alternator (minimum 2 seconds) and I will assess it for remanufacturing acceptance, inspecting the pulley, cover, and housing.',
+};
+
+function resetPanel(panel) {
+  const area = document.getElementById(panel + '-chat');
+  if (!area) return;
+  // Clear chat
+  area.innerHTML = '';
+  // New session ID so backend starts fresh
+  SESSIONS[panel] = panel + '_' + Math.random().toString(36).slice(2,10);
+  // Reset busy flag
+  busy[panel] = false;
+  const sendBtn = document.getElementById(panel + '-send');
+  if (sendBtn) sendBtn.disabled = false;
+  // Show welcome message
+  setTimeout(function() {
+    addMsg(panel + '-chat', 'agent', WELCOME_MSGS[panel] || 'Ready.', 'accent-bubble');
+  }, 180);
+}
+bindInput('oracle-input', oracleSend);
+bindInput('pcb-input',    pcbSend);
+bindInput('wm-input',     wmSend);
+bindInput('borg-input',   borgSend);
+
+// Show Oracle welcome on every page load
+setTimeout(function(){ resetPanel('oracle'); }, 420);
+</script>
+</body>
+</html>
